@@ -9,106 +9,41 @@ import Link from "next/link";
 import { Button } from "../components/ui/button";
 // import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useState } from "react";
-// import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-// import { QuotaService } from "../services/QuotaService";
-// import { UserDetailsService } from "../services/UserDetailsService";
-// import { setUser } from "../store/slices/authSlice";
-// import { setUserDetails, setUserQuota } from "../store/slices/firebaseSlice";
 import { Roboto_Slab, Inter } from "next/font/google"; // Import Inter here!
 // import AuthService from "../services/AuthService"; // Import AuthService
+import { useState } from "react";
+import useAuth from "../hooks/useAuth";
+import AuthService from "../services/AuthService";
 
 const inter = Inter({ subsets: ["latin"] }); // Initialize Inter font
 const robotoSlab = Roboto_Slab({ subsets: ["latin"] });
 
 const Header = () => {
-   // const { user } = useSelector((state) => state.auth);
-   // const { userQuota, userDetails } = useSelector((state) => state.firebase);
-   // const dispatch = useDispatch();
-   // const router = useRouter();
-   // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-   // const [isLoading, setIsLoading] = useState(false);
+   const { user, quota, templates } = useAuth();
+   const [isLoading, setIsLoading] = useState(false);
+   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-   // const handleLogout = async () => {
-   //    try {
-   //       await AuthService.signOut(dispatch, logout, clearFirebaseData);
-   //    } catch (error) {
-   //       console.error("Logout error:", error);
-   //    }
-   // };
+   const handleSignIn = async () => {
+      try {
+         setIsLoading(true);
+         await AuthService.signInWithGoogle();
+      } catch (error) {
+         console.error("Login error:", error);
+      } finally {
+         setIsLoading(false);
+      }
+   };
 
-   // const handleGetStarted = async () => {
-   //    try {
-   //       setIsLoading(true);
-   //       await AuthService.handleAuthFlow(dispatch, router, user, userDetails, {
-   //          setUser,
-   //          setUserQuota,
-   //          setUserDetails,
-   //       });
-   //    } catch (error) {
-   //       console.error("Login error:", error);
-   //    } finally {
-   //       setIsLoading(false);
-   //    }
-   // };
-
-   // const handleUpgradeClick = async () => {
-   //    try {
-   //       const response = await fetch("/api/payment/create-payment-link", {
-   //          method: "POST",
-   //          headers: { "Content-Type": "application/json" },
-   //          body: JSON.stringify({
-   //             userId: user.uid,
-   //             userEmail: user.email,
-   //             userName: user.name,
-   //          }),
-   //       });
-
-   //       const { paymentLink } = await response.json();
-   //       if (!paymentLink) throw new Error("Failed to create payment link");
-
-   //       // Open payment in new window
-   //       window.open(paymentLink, "_blank");
-
-   //       // Start polling for payment status
-   //       const checkPaymentStatus = setInterval(async () => {
-   //          try {
-   //             const verifyResponse = await fetch(
-   //                "/api/payment/verify-payment",
-   //                {
-   //                   method: "POST",
-   //                   headers: { "Content-Type": "application/json" },
-   //                   body: JSON.stringify({
-   //                      userId: user.uid,
-   //                      paymentId: window.localStorage.getItem(
-   //                         "razorpay_payment_id"
-   //                      ),
-   //                   }),
-   //                }
-   //             );
-
-   //             const data = await verifyResponse.json();
-   //             if (data.success) {
-   //                clearInterval(checkPaymentStatus);
-   //                // Refresh quota data
-   //                const quota = await QuotaService.getUserQuota(user.uid);
-   //                dispatch(setUserQuota(quota));
-   //                setIsDropdownOpen(false);
-   //             }
-   //          } catch (error) {
-   //             console.error("Error verifying payment:", error);
-   //          }
-   //       }, 2000);
-
-   //       // Stop checking after 5 minutes
-   //       setTimeout(() => {
-   //          clearInterval(checkPaymentStatus);
-   //       }, 300000);
-   //    } catch (error) {
-   //       console.error("Error initiating payment:", error);
-   //    }
-   // };
-
+   const handleSignOut = async () => {
+      try {
+         await AuthService.signOut();
+      } catch (error) {
+         console.error("Logout error:", error);
+      }
+   };
+   console.log(user, "user");
+   console.log(quota, "1234quota");
+   console.log(templates, "TEMPLATE");
    return (
       <header className="border-b bg-white/70 backdrop-blur-md fixed top-0 w-full z-50">
          <div className="container mx-auto px-4">
@@ -139,21 +74,73 @@ const Header = () => {
                   ))}
                </nav>
                {/* User Section */}
-               {/*  */}
+
                <div className="flex items-center space-x-4">
-                  <Button
-                     // onClick={handleGetStarted}
-                     variant="ghost"
-                     className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 transition-colors duration-200"
-                  >
-                     Sign In
-                  </Button>
-                  <Button
-                     // onClick={handleGetStarted}
-                     className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-pink-500 hover:via-purple-600 hover:to-indigo-600 text-white transition-all duration-300 shadow-md hover:shadow-lg"
-                  >
-                     FREE Trial
-                  </Button>
+                  {!user ? (
+                     <Button
+                        onClick={handleSignIn}
+                        disabled={isLoading}
+                        className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-pink-500 hover:via-purple-600 hover:to-indigo-600"
+                     >
+                        {isLoading ? "Signing in..." : "Sign in with Google"}
+                     </Button>
+                  ) : (
+                     <div className="flex items-center gap-4 relative">
+                        <div className="flex items-center gap-2">
+                           {user.picture ? (
+                              <img
+                                 src={user.picture}
+                                 alt={user.name}
+                                 className="w-8 h-8 rounded-full"
+                              />
+                           ) : (
+                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                 {user.name?.charAt(0)}
+                              </div>
+                           )}
+                           <button
+                              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                              className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                           >
+                              {user.name}
+                           </button>
+                        </div>
+
+                        {isDropdownOpen && (
+                           <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
+                              <div className="px-4 py-2 border-b border-gray-200">
+                                 <p className="text-sm text-gray-600">
+                                    {user.email}
+                                 </p>
+                              </div>
+
+                              {quota && (
+                                 <div className="px-4 py-2 border-b border-gray-200">
+                                    <p className="text-sm font-medium text-gray-900">
+                                       Quota Usage
+                                    </p>
+                                    <div className="mt-1 text-sm text-gray-600">
+                                       <p>
+                                          Used: {quota.formats.used} /{" "}
+                                          {quota.formats.limit}
+                                       </p>
+                                       <p className="text-xs text-gray-500">
+                                          Plan: {quota.subscription.type}
+                                       </p>
+                                    </div>
+                                 </div>
+                              )}
+
+                              <button
+                                 onClick={handleSignOut}
+                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                              >
+                                 Sign Out
+                              </button>
+                           </div>
+                        )}
+                     </div>
+                  )}
                </div>
             </div>
          </div>
