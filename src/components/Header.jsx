@@ -1,25 +1,20 @@
 "use client";
-// import { useSelector, useDispatch } from "react-redux";
-// import { logout } from "../store/slices/authSlice";
-// import { clearFirebaseData } from "../store/slices/firebaseSlice";
-// import { auth } from "../services/firebase";
+import { useSelector } from "react-redux";
 import { CheckCircle } from "lucide-react";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
-// import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Roboto_Slab, Inter } from "next/font/google"; // Import Inter here!
-// import AuthService from "../services/AuthService"; // Import AuthService
-import { useState } from "react";
-import useAuth from "../hooks/useAuth";
-import AuthService from "../services/AuthService";
+import { Roboto_Slab, Inter } from "next/font/google"; 
+import AuthService from "../services/AuthService"; 
+import { useState, useEffect } from "react";
 
-const inter = Inter({ subsets: ["latin"] }); // Initialize Inter font
+const inter = Inter({ subsets: ["latin"] }); 
 const robotoSlab = Roboto_Slab({ subsets: ["latin"] });
 
 const Header = () => {
-   const { user, quota, templates } = useAuth();
+   const { user, loading: authLoading } = useSelector((state) => state.auth);
+   const { quota, templates, loading: quotaLoading } = useSelector((state) => state.quota);
    const [isLoading, setIsLoading] = useState(false);
    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -36,11 +31,27 @@ const Header = () => {
 
    const handleSignOut = async () => {
       try {
+         setIsLoading(true);
          await AuthService.signOut();
       } catch (error) {
          console.error("Logout error:", error);
+      } finally {
+         setIsLoading(false);
       }
    };
+
+   // Close dropdown when clicking outside
+   useEffect(() => {
+      const handleClickOutside = (event) => {
+         if (isDropdownOpen && !event.target.closest('.dropdown-container')) {
+            setIsDropdownOpen(false);
+         }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+   }, [isDropdownOpen]);
+
    console.log(user, "user");
    console.log(quota, "1234quota");
    console.log(templates, "TEMPLATE");
@@ -74,18 +85,26 @@ const Header = () => {
                   ))}
                </nav>
                {/* User Section */}
-
                <div className="flex items-center space-x-4">
-                  {!user ? (
+                  {authLoading ? (
+                     <div className="animate-pulse bg-gray-200 h-10 w-24 rounded" />
+                  ) : !user ? (
                      <Button
                         onClick={handleSignIn}
                         disabled={isLoading}
                         className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-pink-500 hover:via-purple-600 hover:to-indigo-600"
                      >
-                        {isLoading ? "Signing in..." : "Sign in with Google"}
+                        {isLoading ? (
+                           <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Signing in...</span>
+                           </div>
+                        ) : (
+                           "Sign in with Google"
+                        )}
                      </Button>
                   ) : (
-                     <div className="flex items-center gap-4 relative">
+                     <div className="flex items-center gap-4 relative dropdown-container">
                         <div className="flex items-center gap-2">
                            {user.picture ? (
                               <img
@@ -114,7 +133,12 @@ const Header = () => {
                                  </p>
                               </div>
 
-                              {quota && (
+                              {quotaLoading ? (
+                                 <div className="px-4 py-2 space-y-2">
+                                    <div className="animate-pulse bg-gray-200 h-4 w-3/4 rounded" />
+                                    <div className="animate-pulse bg-gray-200 h-4 w-1/2 rounded" />
+                                 </div>
+                              ) : quota ? (
                                  <div className="px-4 py-2 border-b border-gray-200">
                                     <p className="text-sm font-medium text-gray-900">
                                        Quota Usage
@@ -129,13 +153,14 @@ const Header = () => {
                                        </p>
                                     </div>
                                  </div>
-                              )}
+                              ) : null}
 
                               <button
                                  onClick={handleSignOut}
-                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                                 disabled={isLoading}
+                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
                               >
-                                 Sign Out
+                                 {isLoading ? "Signing out..." : "Sign Out"}
                               </button>
                            </div>
                         )}
