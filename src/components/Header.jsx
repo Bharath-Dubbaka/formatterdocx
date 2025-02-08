@@ -52,9 +52,6 @@ const Header = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
    }, [isDropdownOpen]);
 
-   console.log(user, "user");
-   console.log(quota, "1234quota");
-   console.log(templates, "TEMPLATE");
    return (
       <header className="border-b bg-white/70 backdrop-blur-md fixed top-0 w-full z-50">
          <div className="container mx-auto px-4">

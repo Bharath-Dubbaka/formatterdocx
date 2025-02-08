@@ -6,14 +6,88 @@ import Image from "next/image";
 import { Upload } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import useAuth from "../hooks/useAuth";
+import ResumeService from "../services/ResumeService";
+import {
+  setOriginalText,
+  setParsedSections,
+  setLoading,
+  setError,
+} from "../store/slices/resumeSlice";
+import mammoth from 'mammoth';
 
 export default function Home() {
   useAuth();
 
+  const dispatch = useDispatch();
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [file, setFile] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const { user } = useSelector((state) => state.auth);
+  const { loading, error, parsedSections } = useSelector((state) => state.resume);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      // Check file type
+      const validTypes = [
+        'application/msword',                                                     // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
+      ];
+      
+      if (!validTypes.includes(selectedFile.type)) {
+        dispatch(setError('Please upload a Word document (.doc or .docx)'));
+        return;
+      }
+      
+      setFile(selectedFile);
+      dispatch(setError(null));
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+
+      // Convert Word document to text using mammoth
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ 
+        arrayBuffer: arrayBuffer,
+        includeDefaultStyleMap: true
+      });
+      
+      // Extract text content from HTML
+      const textContent = result.value
+        .replace(/<[^>]+>/g, '\n') // Replace HTML tags with newlines
+        .replace(/&nbsp;/g, ' ')   // Replace &nbsp; with spaces
+        .replace(/\n\s*\n/g, '\n') // Remove extra newlines
+        .trim();
+            
+      if (!textContent?.trim()) {
+        throw new Error('The document appears to be empty');
+      }
+
+      dispatch(setOriginalText(textContent));
+
+      // Parse resume
+      const parsedContent = await ResumeService.parseResume(textContent);
+      
+      if (!parsedContent?.sections?.length) {
+        throw new Error('No sections were identified in the resume');
+      }
+
+      dispatch(setParsedSections(parsedContent));
+    } catch (error) {
+      console.error("Upload error:", error);
+      dispatch(setError(error.message || 'Failed to process the document. Please try again.'));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
 
   // Sample template definitions
   const templates = [
@@ -49,18 +123,6 @@ export default function Home() {
     },
   ];
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    setFile(file);
-  };
-
-  const handleConvert = async () => {
-    setProcessing(true);
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setProcessing(false);
-  };
-
   return (
     <div className="w-full max-w-2xl pt-36 mx-auto">
       <div>
@@ -72,20 +134,25 @@ export default function Home() {
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
             <input
               type="file"
-              onChange={handleFileUpload}
+              accept=".doc,.docx"
+              onChange={handleFileChange}
               className="hidden"
               id="resume-upload"
-              accept=".pdf,.doc,.docx"
             />
             <label
               htmlFor="resume-upload"
-              className="flex flex-col items-center cursor-pointer"
+              className="cursor-pointer text-indigo-600 hover:text-indigo-800"
             >
-              <Upload className="w-12 h-12 text-gray-400 mb-2" />
-              <span className="text-sm text-gray-600">
-                {file ? file.name : "Upload Resume (PDF, DOC, DOCX)"}
-              </span>
+              Choose a Word document
             </label>
+            {file && (
+              <p className="mt-2 text-sm text-gray-600">
+                Selected: {file.name}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-gray-500">
+              Supported formats: .doc, .docx
+            </p>
           </div>
 
           {/* Template Selection */}
@@ -123,19 +190,51 @@ export default function Home() {
             </div>
           )}
 
-          {/* Convert Button */}
-          <button
-            onClick={handleConvert}
-            disabled={!file || !selectedTemplate || processing}
-            className={`w-full p-2 rounded-md text-white 
-            ${
-              processing || !file || !selectedTemplate
-                ? "bg-gray-400"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
+          {/* Parse Button */}
+          <Button
+            onClick={handleUpload}
+            disabled={!file || loading}
+            className="w-full"
           >
-            {processing ? "Processing..." : "Convert Resume"}
-          </button>
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Parsing...</span>
+              </div>
+            ) : (
+              "Parse Resume"
+            )}
+          </Button>
+
+          {error && (
+            <div className="text-red-500 text-sm mt-2 p-3 bg-red-50 rounded-md">
+              {error}
+            </div>
+          )}
+
+          {parsedSections && (
+            <div className="mt-8 space-y-6">
+              <h2 className="text-xl font-semibold">Parsed Sections</h2>
+              <div className="text-sm text-gray-500 mb-4">
+                Total sections found: {parsedSections.metadata?.totalSections || 0}
+              </div>
+              {parsedSections.sections.map((section, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-medium text-lg">
+                      {section.title}
+                    </h3>
+                    <span className="text-xs text-gray-500">
+                      {section.type}
+                    </span>
+                  </div>
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                    {section.content}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
