@@ -5,16 +5,20 @@ import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import Image from "next/image";
-import { Roboto_Slab, Inter } from "next/font/google"; 
-import AuthService from "../services/AuthService"; 
+import { Roboto_Slab, Inter } from "next/font/google";
+import AuthService from "../services/AuthService";
 import { useState, useEffect } from "react";
 
-const inter = Inter({ subsets: ["latin"] }); 
+const inter = Inter({ subsets: ["latin"] });
 const robotoSlab = Roboto_Slab({ subsets: ["latin"] });
 
 const Header = () => {
    const { user, loading: authLoading } = useSelector((state) => state.auth);
-   const { quota, templates, loading: quotaLoading } = useSelector((state) => state.quota);
+   const {
+      quota,
+      templates,
+      loading: quotaLoading,
+   } = useSelector((state) => state.quota);
    const [isLoading, setIsLoading] = useState(false);
    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -43,13 +47,14 @@ const Header = () => {
    // Close dropdown when clicking outside
    useEffect(() => {
       const handleClickOutside = (event) => {
-         if (isDropdownOpen && !event.target.closest('.dropdown-container')) {
+         if (isDropdownOpen && !event.target.closest(".dropdown-container")) {
             setIsDropdownOpen(false);
          }
       };
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+         document.removeEventListener("mousedown", handleClickOutside);
    }, [isDropdownOpen]);
 
    return (
@@ -71,7 +76,7 @@ const Header = () => {
                </Link>
                {/* Navigation */}
                <nav className="hidden md:flex items-center space-x-8">
-                  {["Faq", "Pricing", "About"].map((item) => (
+                  {["Faq", "Pricing", "About", "Formats"].map((item) => (
                      <Link
                         key={item}
                         href={`/${item.toLowerCase()}`}

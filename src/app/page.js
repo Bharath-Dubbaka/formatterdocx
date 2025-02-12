@@ -16,6 +16,7 @@ import {
   setError,
 } from "../store/slices/resumeSlice";
 import mammoth from 'mammoth';
+import TemplateService from "../services/TemplateService";
 
 export default function Home() {
   useAuth();
@@ -26,7 +27,25 @@ export default function Home() {
   const [processing, setProcessing] = useState(false);
   const { user } = useSelector((state) => state.auth);
   const { loading, error, parsedSections } = useSelector((state) => state.resume);
+  const [templates, setTemplates] = useState(TemplateService.defaultTemplates);
 
+
+  const handleTemplateUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    try {
+      dispatch(setLoading(true));
+      const extractedTemplate = await TemplateService.extractTemplateFromDoc(file);
+      setTemplates(prev => [...prev, extractedTemplate]);
+      dispatch(setError("Template extracted successfully!"));
+    } catch (error) {
+      dispatch(setError("Failed to extract template: " + error.message));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+  
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
@@ -89,39 +108,39 @@ export default function Home() {
     }
   };
 
-  // Sample template definitions
-  const templates = [
-    {
-      id: "template1",
-      name: "BYDCorp Format",
-      sections: [
-        "Professional Summary",
-        "Technical Skills",
-        "Work Experience",
-        "Education",
-      ],
-    },
-    {
-      id: "template2",
-      name: "Cohert Inc Format",
-      sections: [
-        "Professional Summary",
-        "Technical Skills",
-        "Education",
-        "Professional Experience",
-      ],
-    },
-    {
-      id: "template3",
-      name: "Joanson Format",
-      sections: [
-        "Professional Experience",
-        "Professional Summary",
-        "Technical Skills",
-        "Education",
-      ],
-    },
-  ];
+  // // Sample template definitions
+  // const templates = [
+  //   {
+  //     id: "template1",
+  //     name: "BYDCorp Format",
+  //     sections: [
+  //       "Professional Summary",
+  //       "Technical Skills",
+  //       "Work Experience",
+  //       "Education",
+  //     ],
+  //   },
+  //   {
+  //     id: "template2",
+  //     name: "Cohert Inc Format",
+  //     sections: [
+  //       "Professional Summary",
+  //       "Technical Skills",
+  //       "Education",
+  //       "Professional Experience",
+  //     ],
+  //   },
+  //   {
+  //     id: "template3",
+  //     name: "Joanson Format",
+  //     sections: [
+  //       "Professional Experience",
+  //       "Professional Summary",
+  //       "Technical Skills",
+  //       "Education",
+  //     ],
+  //   },
+  // ];
 
   return (
     <div className="w-full max-w-2xl pt-36 mx-auto">
@@ -156,7 +175,7 @@ export default function Home() {
           </div>
 
           {/* Template Selection */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <label className="block text-sm font-medium">
               Select Client Template
             </label>
@@ -172,6 +191,19 @@ export default function Home() {
                 </option>
               ))}
             </select>
+          </div> */}
+
+          {/* Template Upload */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">
+              Upload Client Template
+            </label>
+            <input
+              type="file"
+              accept=".doc,.docx"
+              onChange={handleTemplateUpload}
+              className="w-full p-2 border rounded-md"
+            />
           </div>
 
           {/* Template Preview */}
