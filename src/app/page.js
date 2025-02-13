@@ -22,34 +22,17 @@ export default function Home() {
   useAuth();
 
   const dispatch = useDispatch();
-  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [file, setFile] = useState(null);
-  const [processing, setProcessing] = useState(false);
   const { user } = useSelector((state) => state.auth);
   const { loading, error, parsedSections } = useSelector((state) => state.resume);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [mappedSections, setMappedSections] = useState({});
+  const [processing, setProcessing] = useState(false);
   const [templates, setTemplates] = useState(TemplateService.defaultTemplates);
 
-
-  const handleTemplateUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-  
-    try {
-      dispatch(setLoading(true));
-      const extractedTemplate = await TemplateService.extractTemplateFromDoc(file);
-      setTemplates(prev => [...prev, extractedTemplate]);
-      dispatch(setError("Template extracted successfully!"));
-    } catch (error) {
-      dispatch(setError("Failed to extract template: " + error.message));
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-  
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      // Check file type
       const validTypes = [
         'application/msword',                                                     // .doc
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
@@ -72,14 +55,12 @@ export default function Home() {
       dispatch(setLoading(true));
       dispatch(setError(null));
 
-      // Convert Word document to text using mammoth
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ 
         arrayBuffer: arrayBuffer,
         includeDefaultStyleMap: true
       });
       
-      // Extract text content from HTML
       const textContent = result.value
         .replace(/<[^>]+>/g, '\n') // Replace HTML tags with newlines
         .replace(/&nbsp;/g, ' ')   // Replace &nbsp; with spaces
@@ -108,39 +89,55 @@ export default function Home() {
     }
   };
 
-  // // Sample template definitions
-  // const templates = [
-  //   {
-  //     id: "template1",
-  //     name: "BYDCorp Format",
-  //     sections: [
-  //       "Professional Summary",
-  //       "Technical Skills",
-  //       "Work Experience",
-  //       "Education",
-  //     ],
-  //   },
-  //   {
-  //     id: "template2",
-  //     name: "Cohert Inc Format",
-  //     sections: [
-  //       "Professional Summary",
-  //       "Technical Skills",
-  //       "Education",
-  //       "Professional Experience",
-  //     ],
-  //   },
-  //   {
-  //     id: "template3",
-  //     name: "Joanson Format",
-  //     sections: [
-  //       "Professional Experience",
-  //       "Professional Summary",
-  //       "Technical Skills",
-  //       "Education",
-  //     ],
-  //   },
-  // ];
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(template);
+    // Initialize mapped sections with empty values
+    const initialMapping = {};
+    template.sections.forEach(section => {
+      initialMapping[section] = '';
+    });
+    setMappedSections(initialMapping);
+  };
+
+  const handleSectionMap = (templateSection, parsedSection) => {
+    setMappedSections(prev => ({
+      ...prev,
+      [templateSection]: parsedSection
+    }));
+  };
+
+  const generateFormattedResume = async () => {
+    try {
+      dispatch(setLoading(true));
+      
+      // Create content object for the selected template
+      const content = {};
+      Object.entries(mappedSections).forEach(([templateSection, parsedSectionTitle]) => {
+        const parsedSection = parsedSections.sections.find(s => s.title === parsedSectionTitle);
+        content[templateSection] = parsedSection ? parsedSection.content : '';
+      });
+      
+      // Generate document
+      const blob = await TemplateService.generateDocument(content, selectedTemplate);
+      
+      // Download the file
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'formatted_resume.docx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      dispatch(setError('Resume generated successfully!'));
+    } catch (error) {
+      console.error('Failed to generate resume:', error);
+      dispatch(setError('Failed to generate resume: ' + error.message));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
 
   return (
     <div className="w-full max-w-2xl pt-36 mx-auto">
@@ -174,54 +171,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Template Selection */}
-          {/* <div className="space-y-2">
-            <label className="block text-sm font-medium">
-              Select Client Template
-            </label>
-            <select
-              className="w-full p-2 border rounded-md"
-              value={selectedTemplate}
-              onChange={(e) => setSelectedTemplate(e.target.value)}
-            >
-              <option value="">Choose a template...</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </div> */}
-
-          {/* Template Upload */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">
-              Upload Client Template
-            </label>
-            <input
-              type="file"
-              accept=".doc,.docx"
-              onChange={handleTemplateUpload}
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-
-          {/* Template Preview */}
-          {selectedTemplate && (
-            <div className="border rounded-md p-4 bg-gray-50">
-              <h3 className="font-medium mb-2">Template Sections:</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {templates
-                  .find((t) => t.id === selectedTemplate)
-                  ?.sections.map((section) => (
-                    <li key={section} className="text-sm text-gray-600">
-                      {section}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
-
           {/* Parse Button */}
           <Button
             onClick={handleUpload}
@@ -231,7 +180,7 @@ export default function Home() {
             {loading ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Parsing...</span>
+                <span>Processing...</span>
               </div>
             ) : (
               "Parse Resume"
@@ -239,32 +188,106 @@ export default function Home() {
           </Button>
 
           {error && (
-            <div className="text-red-500 text-sm mt-2 p-3 bg-red-50 rounded-md">
+            <div className={`text-sm mt-2 p-3 rounded-md ${error.includes('successfully') ? 'text-green-500 bg-green-50' : 'text-red-500 bg-red-50'}`}>
               {error}
             </div>
           )}
 
           {parsedSections && (
             <div className="mt-8 space-y-6">
-              <h2 className="text-xl font-semibold">Parsed Sections</h2>
-              <div className="text-sm text-gray-500 mb-4">
-                Total sections found: {parsedSections.metadata?.totalSections || 0}
-              </div>
-              {parsedSections.sections.map((section, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-lg">
-                      {section.title}
-                    </h3>
-                    <span className="text-xs text-gray-500">
-                      {section.type}
-                    </span>
-                  </div>
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                    {section.content}
-                  </pre>
+              {/* Template Selection */}
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Select Template</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {templates.map((template) => (
+                    <div
+                      key={template.id}
+                      className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedTemplate?.id === template.id ? 'border-blue-500 shadow-lg' : 'hover:border-gray-400'}`}
+                      onClick={() => handleTemplateSelect(template)}
+                    >
+                      <h3 className="font-medium mb-2">{template.name}</h3>
+                      <ul className="text-sm text-gray-600 list-disc list-inside">
+                        {template.sections.map((section) => (
+                          <li key={section}>{section}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Section Mapping */}
+              {selectedTemplate && (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">Map Sections</h2>
+                  <div className="space-y-4">
+                    {selectedTemplate.sections.map((templateSection) => (
+                      <div key={templateSection} className="border rounded-lg p-4">
+                        <h3 className="font-medium mb-2">{templateSection}</h3>
+                        <select
+                          className="w-full p-2 border rounded"
+                          value={mappedSections[templateSection] || ''}
+                          onChange={(e) => handleSectionMap(templateSection, e.target.value)}
+                        >
+                          <option value="">Select section to map</option>
+                          {parsedSections.sections.map((section) => (
+                            <option key={section.title} value={section.title}>
+                              {section.title}
+                            </option>
+                          ))}
+                        </select>
+                        {mappedSections[templateSection] && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600 mb-1">Preview:</p>
+                            <div className="text-sm bg-gray-50 p-2 rounded max-h-32 overflow-y-auto">
+                              {parsedSections.sections.find(
+                                s => s.title === mappedSections[templateSection]
+                              )?.content}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Generate Button */}
+                  <Button
+                    onClick={generateFormattedResume}
+                  //   disabled={loading || Object.values(mappedSections).some(v => !v)}
+                    className="w-full mt-4"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Generating...</span>
+                      </div>
+                    ) : (
+                      "Generate Formatted Resume"
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Parsed Sections Preview */}
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold mb-4">Parsed Sections</h2>
+                <div className="text-sm text-gray-500 mb-4">
+                  Total sections found: {parsedSections.metadata?.totalSections || 0}
+                </div>
+                <div className="space-y-4">
+                  {parsedSections.sections.map((section, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium text-lg">{section.title}</h3>
+                        <span className="text-xs text-gray-500">{section.type}</span>
+                      </div>
+                      <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                        {section.content}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

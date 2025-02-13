@@ -3,7 +3,7 @@ export const modernTemplate = {
   name: "Modern Professional",
   styles: {
     document: {
-      font: "Calibri",
+      font: "Roboto",
       fontSize: "11pt",
       lineSpacing: 1.15,
       margins: {
@@ -15,7 +15,7 @@ export const modernTemplate = {
     },
     sections: {
       heading: {
-        font: "Calibri",
+        font: "Roboto",
         fontSize: "16pt",
         bold: true,
         color: "#2D3748",
@@ -54,7 +54,7 @@ export const minimalTemplate = {
     },
     sections: {
       heading: {
-        font: "Arial",
+        font: "Calibri",
         fontSize: "14pt",
         bold: true,
         color: "#1A202C",

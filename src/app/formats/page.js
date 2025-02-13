@@ -11,39 +11,39 @@ export default function Formats() {
    const [selectedTemplate, setSelectedTemplate] = useState(null);
    const [loading, setLoading] = useState(false);
 
-   const handleTemplateUpload = async (e) => {
-      console.log('handleTemplateUpload called');
-      const file = e.target.files[0];
-      if (!file) return;
+   // const handleTemplateUpload = async (e) => {
+   //    console.log('handleTemplateUpload called');
+   //    const file = e.target.files[0];
+   //    if (!file) return;
 
-      if (!file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
-         alert('Please upload a Word document (.doc or .docx)');
-         return;
-      }
+   //    if (!file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
+   //       alert('Please upload a Word document (.doc or .docx)');
+   //       return;
+   //    }
 
-      try {
-         setLoading(true);
-         console.log('Processing file:', file.name);
+   //    try {
+   //       setLoading(true);
+   //       console.log('Processing file:', file.name);
          
-         const extractedTemplate = await TemplateService.extractTemplateFromDoc(file);
-         console.log('Extracted template:', extractedTemplate);
+   //       const extractedTemplate = await TemplateService.extractTemplateFromDoc(file);
+   //       console.log('Extracted template:', extractedTemplate);
          
-         setTemplates(prev => [...prev, extractedTemplate]);
-         setSelectedTemplate(extractedTemplate);
-         alert('Template extracted successfully!');
-      } catch (error) {
-         console.error("Template extraction failed:", error);
-         alert("Failed to extract template: " + error.message);
-      } finally {
-         setLoading(false);
-         // Reset the file input
-         e.target.value = '';
-      }
-   };
+   //       setTemplates(prev => [...prev, extractedTemplate]);
+   //       setSelectedTemplate(extractedTemplate);
+   //       alert('Template extracted successfully!');
+   //    } catch (error) {
+   //       console.error("Template extraction failed:", error);
+   //       alert("Failed to extract template: " + error.message);
+   //    } finally {
+   //       setLoading(false);
+   //       // Reset the file input
+   //       e.target.value = '';
+   //    }
+   // };
 
-   const triggerFileInput = () => {
-      document.getElementById('template-upload').click();
-   };
+   // const triggerFileInput = () => {
+   //    document.getElementById('template-upload').click();
+   // };
 
    return (
       <div className="container mx-auto px-4 pt-28">
@@ -54,17 +54,17 @@ export default function Formats() {
                   <input
                      type="file"
                      accept=".doc,.docx"
-                     onChange={handleTemplateUpload}
+                     // onChange={handleTemplateUpload}
                      className="hidden"
                      id="template-upload"
                   />
-                  <Button 
-                     onClick={triggerFileInput}
+                  {/* <Button 
+                     // onClick={triggerFileInput}
                      disabled={loading}
                      className="px-4 py-2"
                   >
                      {loading ? "Processing..." : "Upload Template"}
-                  </Button>
+                  </Button> */}
                </div>
             </div>
 
