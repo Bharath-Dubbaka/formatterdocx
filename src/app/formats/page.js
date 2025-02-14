@@ -24,10 +24,10 @@ export default function Formats() {
    //    try {
    //       setLoading(true);
    //       console.log('Processing file:', file.name);
-         
+
    //       const extractedTemplate = await TemplateService.extractTemplateFromDoc(file);
    //       console.log('Extracted template:', extractedTemplate);
-         
+
    //       setTemplates(prev => [...prev, extractedTemplate]);
    //       setSelectedTemplate(extractedTemplate);
    //       alert('Template extracted successfully!');
@@ -100,7 +100,7 @@ export default function Formats() {
                         <div
                            className="border rounded p-4 text-xs"
                            dangerouslySetInnerHTML={{
-                              __html: TemplateService.generateTemplatePreview(template)
+                              __html: template ? TemplateService.generateTemplatePreview(template) : ''
                            }}
                         />
                      </div>

@@ -1,8 +1,9 @@
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { modernTemplate, minimalTemplate } from "../templates/defaultTemplates";
+import { advancedTemplate } from "../dummyTemplate";
 
 class TemplateService {
-   static defaultTemplates = [modernTemplate, minimalTemplate];
+   static defaultTemplates = [modernTemplate, minimalTemplate, advancedTemplate];
 
    static async extractTemplateFromDoc(file) {
       try {
@@ -260,8 +261,8 @@ class TemplateService {
               margin-bottom: 10px;
             ">${section}</h2>
             <div style="
-              font-size: ${template.styles.sections.content.fontSize};
-              line-height: ${template.styles.sections.content.lineSpacing};
+              font-size: ${template.styles.sections.content?.fontSize};
+              line-height: ${template.styles.sections.content?.lineSpacing};
             ">
               <p>[${section} content will appear here]</p>
             </div>

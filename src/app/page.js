@@ -240,9 +240,14 @@ export default function Home() {
                           <div className="mt-2">
                             <p className="text-sm text-gray-600 mb-1">Preview:</p>
                             <div className="text-sm bg-gray-50 p-2 rounded max-h-32 overflow-y-auto">
-                              {parsedSections.sections.find(
-                                s => s.title === mappedSections[templateSection]
-                              )?.content}
+                              {(() => {
+                                const content = parsedSections.sections.find(
+                                  s => s.title === mappedSections[templateSection]
+                                )?.content;
+                                return typeof content === 'object' ? 
+                                  JSON.stringify(content, null, 2) : 
+                                  content;
+                              })()}
                             </div>
                           </div>
                         )}
@@ -282,7 +287,7 @@ export default function Home() {
                         <span className="text-xs text-gray-500">{section.type}</span>
                       </div>
                       <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                        {section.content}
+                        {typeof section.content === 'object' ? JSON.stringify(section.content, null, 2) : section.content}
                       </pre>
                     </div>
                   ))}
