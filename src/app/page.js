@@ -16,6 +16,8 @@ import {
   setError,
 } from "../store/slices/resumeSlice";
 import mammoth from 'mammoth';
+import { Document, Paragraph, TextRun, Packer, AlignmentType, TabStopType, BorderStyle } from "docx";
+import Preview from '../components/Preview';
 
 export default function Home() {
   useAuth();
@@ -26,23 +28,47 @@ export default function Home() {
   const [processing, setProcessing] = useState(false);
   const { user } = useSelector((state) => state.auth);
   const { loading, error, parsedSections } = useSelector((state) => state.resume);
+// console.log(parsedSections, "parsedSections inside downloadAsWord")
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+
     if (selectedFile) {
-      // Check file type
-      const validTypes = [
-        'application/msword',                                                     // .doc
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
-      ];
-      
-      if (!validTypes.includes(selectedFile.type)) {
-        dispatch(setError('Please upload a Word document (.doc or .docx)'));
-        return;
+      try {
+        setProcessing(true);
+        dispatch(setLoading(true));
+        
+        let extractedText = '';
+        
+        if (selectedFile.name.endsWith('.docx')) {
+          // Convert File to ArrayBuffer
+          const arrayBuffer = await selectedFile.arrayBuffer();
+          // Use mammoth for DOCX parsing
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          extractedText = result.value;
+        } else if (selectedFile.name.endsWith('.doc')) {
+          throw new Error('Please convert your DOC file to DOCX format');
+        }
+
+        if (!extractedText) {
+          throw new Error('Failed to extract text from the document');
+        }
+
+        // Parse the extracted text using ResumeService
+        const parsedResume = await ResumeService.parseResume(extractedText);
+        
+        dispatch(setOriginalText(extractedText));
+        dispatch(setParsedSections(parsedResume));
+        
+        setProcessing(false);
+        dispatch(setLoading(false));
+      } catch (error) {
+        console.error('Error processing file:', error);
+        dispatch(setError(error.message));
+        setProcessing(false);
+        dispatch(setLoading(false));
       }
-      
-      setFile(selectedFile);
-      dispatch(setError(null));
     }
   };
 
@@ -53,18 +79,16 @@ export default function Home() {
       dispatch(setLoading(true));
       dispatch(setError(null));
 
-      // Convert Word document to text using mammoth
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ 
         arrayBuffer: arrayBuffer,
         includeDefaultStyleMap: true
       });
       
-      // Extract text content from HTML
       const textContent = result.value
-        .replace(/<[^>]+>/g, '\n') // Replace HTML tags with newlines
-        .replace(/&nbsp;/g, ' ')   // Replace &nbsp; with spaces
-        .replace(/\n\s*\n/g, '\n') // Remove extra newlines
+        .replace(/<[^>]+>/g, '\n')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\n\s*\n/g, '\n')
         .trim();
             
       if (!textContent?.trim()) {
@@ -75,6 +99,7 @@ export default function Home() {
 
       // Parse resume
       const parsedContent = await ResumeService.parseResume(textContent);
+      // console.log('Parsed Content inside handleUpload:', parsedContent); // Debug log
       
       if (!parsedContent?.sections?.length) {
         throw new Error('No sections were identified in the resume');
@@ -89,39 +114,86 @@ export default function Home() {
     }
   };
 
-  // Sample template definitions
-  const templates = [
-    {
-      id: "template1",
-      name: "BYDCorp Format",
-      sections: [
-        "Professional Summary",
-        "Technical Skills",
-        "Work Experience",
-        "Education",
-      ],
-    },
-    {
-      id: "template2",
-      name: "Cohert Inc Format",
-      sections: [
-        "Professional Summary",
-        "Technical Skills",
-        "Education",
-        "Professional Experience",
-      ],
-    },
-    {
-      id: "template3",
-      name: "Joanson Format",
-      sections: [
-        "Professional Experience",
-        "Professional Summary",
-        "Technical Skills",
-        "Education",
-      ],
-    },
-  ];
+
+  const downloadAsWord = async () => {
+    // console.log('ParsedSections in downloadAsWord:', parsedSections); // Debug log
+    try {
+      if (!parsedSections || !parsedSections.sections) {
+        throw new Error("No resume data available");
+      }
+
+      // Find sections by type
+      const findSectionByType = (type) => {
+        return parsedSections.sections.find(section => section.type === type);
+      };
+
+      const personalInfo = findSectionByType('PERSONAL_INFO')?.content || {};
+      const summary = findSectionByType('SUMMARY')?.content || '';
+      const experience = findSectionByType('EXPERIENCE')?.content || [];
+      const education = findSectionByType('EDUCATION')?.content || [];
+      const skills = findSectionByType('SKILLS')?.content || '';
+      const certifications = findSectionByType('CERTIFICATIONS')?.content || [];
+
+      // console.log('Transformed sections:', { // Debug log
+      //   personalInfo,
+      //   summary,
+      //   experience,
+      //   education,
+      //   skills,
+      //   certifications
+      // });
+
+      // Transform the data into the expected format
+      const resumeData = {
+        fullName: personalInfo.name || '',
+        contactInformation: `${personalInfo.email || ''} • ${personalInfo.phone || ''} ${personalInfo.location ? `• ${personalInfo.location}` : ''}`,
+        professionalSummary: summary,
+        technicalSkills: Array.isArray(skills) ? skills.join(', ') : skills,
+        professionalExperience: Array.isArray(experience) ? experience.map(exp => ({
+          title: exp.title || '',
+          employer: exp.company || '',
+          location: exp.location || '',
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
+          responsibilities: exp.responsibilities || []
+        })) : [],
+        education: Array.isArray(education) ? education.map(edu => ({
+          degree: edu.degree || '',
+          institution: edu.institution || '',
+          startDate: edu.startDate || '',
+          endDate: edu.endDate || '',
+          description: edu.description || ''
+        })) : [],
+        certifications: Array.isArray(certifications) ? certifications : [certifications].filter(Boolean)
+      };
+
+      console.log('Final resumeData:', resumeData); // Debug log
+
+      // Find selected template
+      const template = templates.find(t => t.id === selectedTemplate);
+      if (!template) {
+        throw new Error("Please select a template first");
+      }
+
+      // Generate document using template
+      const doc = template.generate(resumeData);
+
+      // Generate and download the file
+      await Packer.toBlob(doc).then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "resume.docx";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+
+    } catch (error) {
+      console.error("Error generating Word document:", error);
+      dispatch(setError(error.message || "Error generating document. Please try again."));
+    }
+  };
 
   return (
     <div className="w-full max-w-2xl pt-36 mx-auto">
@@ -156,7 +228,7 @@ export default function Home() {
           </div>
 
           {/* Template Selection */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <label className="block text-sm font-medium">
               Select Client Template
             </label>
@@ -172,10 +244,10 @@ export default function Home() {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* Template Preview */}
-          {selectedTemplate && (
+          {/* {selectedTemplate && (
             <div className="border rounded-md p-4 bg-gray-50">
               <h3 className="font-medium mb-2">Template Sections:</h3>
               <ul className="list-disc pl-5 space-y-1">
@@ -188,7 +260,7 @@ export default function Home() {
                   ))}
               </ul>
             </div>
-          )}
+          )} */}
 
           {/* Parse Button */}
           <Button
@@ -213,26 +285,54 @@ export default function Home() {
           )}
 
           {parsedSections && (
-            <div className="mt-8 space-y-6">
-              <h2 className="text-xl font-semibold">Parsed Sections</h2>
-              <div className="text-sm text-gray-500 mb-4">
-                Total sections found: {parsedSections.metadata?.totalSections || 0}
-              </div>
-              {parsedSections.sections.map((section, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-lg">
-                      {section.title}
-                    </h3>
-                    <span className="text-xs text-gray-500">
-                      {section.type}
-                    </span>
+            <div className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Choose Template</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                {templates.map((template) => (
+                  <div
+                    key={template.id}
+                    className={`border rounded-lg p-4 cursor-pointer ${
+                      selectedTemplate === template.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "hover:border-gray-400"
+                    }`}
+                    onClick={() => setSelectedTemplate(template.id)}
+                  >
+                    <h3 className="font-medium mb-2">{template.name}</h3>
+                    <div className="text-sm text-gray-600">
+                      Sections:
+                      <ul className="list-disc list-inside">
+                        {template.sections.map((section, index) => (
+                          <li key={index}>{section}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                    {section.content}
-                  </pre>
+                ))}
+              </div>
+
+              {/* Preview Section */}
+              {selectedTemplate && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold mb-4">Preview</h2>
+                  <div className="border rounded-lg shadow-sm overflow-hidden">
+                  <Preview 
+  data={parsedSections}
+  template={selectedTemplate}
+/>
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {selectedTemplate && (
+                <button
+                  onClick={downloadAsWord}
+                  className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  disabled={loading}
+                >
+                  Download Resume
+                </button>
+              )}
             </div>
           )}
         </div>
