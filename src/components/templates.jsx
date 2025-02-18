@@ -1,105 +1,86 @@
 import React from 'react';
 
-export const TemplateOne = ({ data }) => {
-  if (!data) return null;
+
+
+
+const TemplateOne = ({ data }) => {
+  console.log('TemplateOne Component - Received Data:', data);
+  
+  if (!data) {
+    console.log('TemplateOne - No data received');
+    return null;
+  }
+
+  // Try parsing the data if it's a string
+  const resumeData = typeof data === 'string' ? JSON.parse(data) : data;
+  console.log('TemplateOne - Parsed Data:', resumeData);
 
   return (
     <div className="bg-white text-black p-8 rounded-lg">
       <div className="space-y-6">
         {/* Header Section */}
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">{data.fullName}</h1>
-          <p className="text-gray-600">{data.contactInformation}</p>
+          <h1 className="text-2xl font-bold">{resumeData?.personalInfo?.name}</h1>
+          <p className="text-gray-600">{resumeData?.personalInfo?.phone}</p>
+          <p className="text-gray-600">{resumeData?.personalInfo?.email}</p>
+          <p className="text-gray-600">{resumeData?.personalInfo?.links?.url}</p>
         </div>
 
         {/* Professional Summary */}
-        <div>
-          <h2 className="text-xl font-bold border-b-2 mb-2">Professional Summary</h2>
-          <p className="text-sm">{data.professionalSummary}</p>
-        </div>
+        {resumeData?.personalInfo?.summary && (
+          <div>
+            <h2 className="text-xl font-bold border-b-2 mb-2">Professional Summary</h2>
+            <p className="text-sm">{resumeData.personalInfo.summary}</p>
+          </div>
+        )}
 
         {/* Technical Skills */}
-        <div>
-          <h2 className="text-xl font-bold border-b-2 mb-2">Technical Skills</h2>
-          <p className="text-sm">{data.technicalSkills}</p>
-        </div>
+        {resumeData?.skills?.technical?.length > 0 && (
+          <div>
+            <h2 className="text-xl font-bold border-b-2 mb-2">Technical Skills</h2>
+            <p className="text-sm">{resumeData.skills.technical[0].skills.join(', ')}</p>
+          </div>
+        )}
 
         {/* Professional Experience */}
-        <div>
-          <h2 className="text-xl font-bold border-b-2 mb-2">Professional Experience</h2>
-          {data.professionalExperience?.map((exp, expIndex) => (
-            <div key={expIndex} className="mb-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold">{exp.title}</h3>
-                  <p className="text-sm">
-                    {exp.employer}
-                    {exp.location && `, ${exp.location}`}
+        {resumeData?.workExperience?.length > 0 && (
+          <div>
+            <h2 className="text-xl font-bold border-b-2 mb-2">Professional Experience</h2>
+            {resumeData.workExperience.map((exp, index) => (
+              <div key={index} className="mb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold">{exp.roleTitle}</h3>
+                    <p className="text-sm">
+                      {exp.employer}
+                      {exp.location?.full && `, ${exp.location.full}`}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {exp.startDate} - {exp.endDate || "Present"}
                   </p>
                 </div>
-                <p className="text-sm text-gray-600">
-                  {exp.startDate} - {exp.endDate}
-                </p>
+                <ul className="list-disc ml-6 mt-2">
+                  {exp.responsibilities?.map((resp, i) => (
+                    <li key={i} className="text-sm mb-1">{resp}</li>
+                  ))}
+                </ul>
               </div>
-              <ul className="list-disc ml-6 mt-2">
-                {exp.responsibilities?.map((resp, respIndex) => (
-                  <li key={respIndex} className="text-sm mb-1">
-                    {resp}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Education */}
-        {data.education?.length > 0 && (
+        {resumeData?.education?.length > 0 && (
           <div>
             <h2 className="text-xl font-bold border-b-2 mb-2">Education</h2>
             <ul className="list-disc ml-6">
-              {data.education.map((edu, index) => (
+              {resumeData.education.map((edu, index) => (
                 <li key={index} className="mb-2">
                   <span className="font-semibold">{edu.degree}</span> - {edu.institution}
-                  {edu.startDate && edu.endDate && (
-                    <span className="text-gray-600">
-                      , {edu.startDate.split('-')[0]} - {edu.endDate.split('-')[0]}
-                    </span>
+                  {edu.startDate && (
+                    <span className="text-gray-600">, {edu.startDate}</span>
                   )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Certifications */}
-        {data.certifications?.length > 0 && (
-          <div>
-            <h2 className="text-xl font-bold border-b-2 mb-2">Certifications</h2>
-            <ul className="list-disc ml-6">
-              {data.certifications.map((cert, index) => (
-                <li key={index} className="mb-2">
-                  <span className="font-semibold">{cert.name}</span>
-                  {cert.issuer && <span> - {cert.issuer}</span>}
-                  {cert.issueDate && (
-                    <span className="text-gray-600">, {cert.issueDate.split('-')[0]}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Projects */}
-        {data.projects?.length > 0 && (
-          <div>
-            <h2 className="text-xl font-bold border-b-2 mb-2">Projects</h2>
-            <ul className="list-disc ml-6">
-              {data.projects.map((project, index) => (
-                <li key={index} className="mb-4">
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{project.name}</span>
-                    <span className="text-sm text-gray-600">{project.description}</span>
-                  </div>
                 </li>
               ))}
             </ul>
@@ -110,9 +91,18 @@ export const TemplateOne = ({ data }) => {
   );
 };
 
-export const TemplateTwo = ({ data }) => {
-  if (!data) return null;
+ const TemplateTwo = ({ data }) => {
+  console.log('TemplateTwo Component - Received Data:', data);
   
+  if (!data) {
+    console.log('TemplateTwo - No data received');
+    return null;
+  }
+
+  // Try parsing the data if it's a string
+  const resumeData = typeof data === 'string' ? JSON.parse(data) : data;
+  console.log('TemplateTwo - Parsed Data:', resumeData);
+
   return (
     <div className="bg-white text-black p-8 rounded-lg font-serif">
       {/* Same structure as TemplateOne but with different styling */}
@@ -121,8 +111,17 @@ export const TemplateTwo = ({ data }) => {
   );
 };
 
-export const TemplateThree = ({ data }) => {
-  if (!data) return null;
+ const TemplateThree = ({ data }) => {
+  console.log('TemplateThree Component - Received Data:', data);
+  
+  if (!data) {
+    console.log('TemplateThree - No data received');
+    return null;
+  }
+
+  // Try parsing the data if it's a string
+  const resumeData = typeof data === 'string' ? JSON.parse(data) : data;
+  console.log('TemplateThree - Parsed Data:', resumeData);
 
   return (
     <div className="bg-white text-black p-8 rounded-lg font-sans">
@@ -131,3 +130,25 @@ export const TemplateThree = ({ data }) => {
     </div>
   );
 };
+
+
+
+
+// Templates Array
+export const templates = [
+    {
+      id: 'template-one',
+      name: 'Template One',
+      generate: (data) => <TemplateOne data={data} />,
+    },
+    {
+      id: 'template-two',
+      name: 'Template Two',
+      generate: (data) => <TemplateTwo data={data} />,
+    },
+    {
+      id: 'template-three',
+      name: 'Template Three',
+      generate: (data) => <TemplateThree data={data} />,
+    },
+  ];
