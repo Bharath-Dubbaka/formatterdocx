@@ -241,12 +241,88 @@ export default function Home() {
                             <p className="text-sm text-gray-600 mb-1">Preview:</p>
                             <div className="text-sm bg-gray-50 p-2 rounded max-h-32 overflow-y-auto">
                               {(() => {
-                                const content = parsedSections.sections.find(
+                                const section = parsedSections.sections.find(
                                   s => s.title === mappedSections[templateSection]
-                                )?.content;
-                                return typeof content === 'object' ? 
-                                  JSON.stringify(content, null, 2) : 
-                                  content;
+                                );
+                                if (!section) return '';
+                                
+                                const content = section.content;
+                                if (!content) return '';
+
+                                switch (section.type) {
+                                  case 'contact':
+                                    return (
+                                      <div>
+                                        <div>{content.name}</div>
+                                        <div>{content.email}</div>
+                                        <div>{content.phone}</div>
+                                        <div>{content.location}</div>
+                                        {content.portfolio && <div>{content.portfolio}</div>}
+                                        {content.linkedin && <div>{content.linkedin}</div>}
+                                      </div>
+                                    );
+                                  case 'skills':
+                                    return (
+                                      <div>
+                                        {content.map((skill, i) => (
+                                          <span key={i} className="inline-block mr-2 mb-1 px-2 py-1 bg-gray-200 rounded text-xs">
+                                            {skill}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    );
+                                  case 'experience':
+                                    return (
+                                      <div className="space-y-2">
+                                        {content.map((exp, i) => (
+                                          <div key={i}>
+                                            <div className="font-medium">{exp.company}</div>
+                                            <div className="text-xs text-gray-600">
+                                              {exp.title} • {exp.duration}
+                                              {exp.location && ` • ${exp.location}`}
+                                            </div>
+                                            <ul className="list-disc list-inside text-xs mt-1">
+                                              {exp.responsibilities.slice(0, 2).map((resp, j) => (
+                                                <li key={j}>{resp}</li>
+                                              ))}
+                                              {exp.responsibilities.length > 2 && (
+                                                <li>... and {exp.responsibilities.length - 2} more</li>
+                                              )}
+                                            </ul>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  case 'education':
+                                    return (
+                                      <div className="space-y-2">
+                                        {content.map((edu, i) => (
+                                          <div key={i}>
+                                            <div className="font-medium">{edu.degree}</div>
+                                            <div className="text-xs text-gray-600">
+                                              {edu.institution}
+                                              {edu.duration && ` • ${edu.duration}`}
+                                              {edu.gpa && ` • GPA: ${edu.gpa}`}
+                                            </div>
+                                            {edu.achievements.length > 0 && (
+                                              <ul className="list-disc list-inside text-xs mt-1">
+                                                {edu.achievements.slice(0, 2).map((achievement, j) => (
+                                                  <li key={j}>{achievement}</li>
+                                                ))}
+                                                {edu.achievements.length > 2 && (
+                                                  <li>... and {edu.achievements.length - 2} more</li>
+                                                )}
+                                              </ul>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  default:
+                                    return typeof content === 'object' ? 
+                                      JSON.stringify(content, null, 2) : 
+                                      content;
+                                }
                               })()}
                             </div>
                           </div>
