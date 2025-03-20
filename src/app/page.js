@@ -13,189 +13,80 @@ import {
 } from "../store/slices/resumeSlice";
 import Preview from "../components/Preview";
 import { templates } from "../components/templates"; // Import templates
+import format from "./api/format/route";
+import { Loader2Icon } from "lucide-react";
 
 export default function Home() {
-  useAuth();
-  const dispatch = useDispatch();
-  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [file, setFile] = useState(null);
-  const [processing, setProcessing] = useState(false); // Add setProcessing
-  const { user } = useSelector((state) => state.auth);
-  const { loading, error, parsedSections } = useSelector((state) => state.resume);
+  const [resumeData, setResumeData] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleFileChange = async (e) => {
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
+  const handleFileChange = (e) => setFile(e.target.files[0]);
 
-    if (selectedFile) {
-      try {
-        dispatch(setLoading(true));
-        setProcessing(true); // Use setProcessing
-
-        let extractedText = "";
-
-        if (selectedFile.name.endsWith(".docx")) {
-          const arrayBuffer = await selectedFile.arrayBuffer();
-          const result = await mammoth.extractRawText({ arrayBuffer });
-          extractedText = result.value;
-        } else if (selectedFile.name.endsWith(".doc")) {
-          throw new Error("Please convert your DOC file to DOCX format");
-        }
-
-        if (!extractedText) {
-          throw new Error("Failed to extract text from the document");
-        }
-
-        // Send extracted text to OpenAI API for parsing
-        const parsedResume = await ResumeService.parseResume(extractedText);
-
-        dispatch(setOriginalText(extractedText));
-        dispatch(setParsedSections(parsedResume));
-      } catch (error) {
-        console.error("Error processing file:", error);
-        dispatch(setError(error.message));
-      } finally {
-        dispatch(setLoading(false));
-        setProcessing(false); // Use setProcessing
-      }
-    }
-  };
-
-  const handleUpload = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!file) return;
+    setIsLoading(true); // Start loading
 
     try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
-
       const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.convertToHtml({
-        arrayBuffer: arrayBuffer,
-        includeDefaultStyleMap: true,
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const text = result.value;
+
+      const response = await fetch("/api/format", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
       });
 
-      const textContent = result.value
-        .replace(/<[^>]+>/g, "\n")
-        .replace(/&nbsp;/g, " ")
-        .replace(/\n\s*\n/g, "\n")
-        .trim();
-
-      if (!textContent?.trim()) {
-        throw new Error("The document appears to be empty");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      dispatch(setOriginalText(textContent));
-
-      // Parse resume
-      const parsedContent = await ResumeService.parseResume(textContent);
-      dispatch(setParsedSections(parsedContent));
+      const structuredData = await response.json();
+      console.log(structuredData, "console.log(structuredData); ");
+      setResumeData(structuredData);
     } catch (error) {
-      console.error("Upload error:", error);
-      dispatch(setError(error.message || "Failed to process the document. Please try again."));
+      console.error("Error formatting resume:", error);
+      // Handle the error, maybe show an error message to the user
     } finally {
-      dispatch(setLoading(false));
+      setIsLoading(false); // Stop loading, regardless of success or failure
     }
   };
 
   return (
-    <div className="w-full max-w-2xl pt-36 mx-auto">
-      <div>
-        <div>Resume Format Converter</div>
-      </div>
-      <div>
-        <div className="space-y-6">
-          {/* File Upload Section */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <input
-              type="file"
-              accept=".doc,.docx"
-              onChange={handleFileChange}
-              className="hidden"
-              id="resume-upload"
-            />
-            <label
-              htmlFor="resume-upload"
-              className="cursor-pointer text-indigo-600 hover:text-indigo-800"
-            >
-              Choose a Word document
-            </label>
-            {file && (
-              <p className="mt-2 text-sm text-gray-600">
-                Selected: {file.name}
-              </p>
-            )}
-            <p className="mt-2 text-xs text-gray-500">
-              Supported formats: .doc, .docx
-            </p>
-          </div>
-
-          {/* Parse Button */}
-          <Button
-            onClick={handleUpload}
-            disabled={!file || loading}
-            className="w-full"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Parsing...</span>
-              </div>
-            ) : (
-              "Parse Resume"
-            )}
-          </Button>
-
-          {error && (
-            <div className="text-red-500 text-sm mt-2 p-3 bg-red-50 rounded-md">
-              {error}
-            </div>
-          )}
-
-          {/* Template Selection and Preview */}
-          {parsedSections && (
-            <div className="mt-8">
-              <h2 className="text-xl font-bold mb-4">Choose Template</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className={`border rounded-lg p-4 cursor-pointer ${
-                      selectedTemplate === template.id
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-300'
-                    }`}
-                    onClick={() => setSelectedTemplate(template.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{template.name}</h3>
-                        <p className="text-sm text-gray-500">{template.description}</p>
-                      </div>
-                      {selectedTemplate === template.id && (
-                        <div className="h-5 w-5 text-indigo-500">✓</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {selectedTemplate && (
-                <div className="mt-8">
-                  <h2 className="text-xl font-bold mb-4">Preview</h2>
-                  <div className="border rounded-lg shadow-sm overflow-hidden">
-                    {console.log('Page Component - Parsed Sections:', parsedSections)}
-                    {console.log('Page Component - Selected Template:', selectedTemplate)}
-                    <Preview
-                      data={parsedSections}
-                      template={selectedTemplate}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="p-8 pt-20">
+      <h1 className="text-3xl mb-4">Resume Formatter</h1>
+      <form onSubmit={handleSubmit} className="mb-8">
+        <input type="file" accept=".docx" onChange={handleFileChange} />
+        <button
+          type="submit"
+          className="ml-4 bg-blue-500 text-white p-2 rounded"
+          disabled={isLoading} // Disable button when loading
+        >
+          {isLoading ? "Formatting..." : "Format Resume"}{" "}
+          {/* Show loading message */}
+        </button>
+      </form>
+      {isLoading && <p>Loading...</p>} {/* Simple loading indicator */}
+      <select
+        value={selectedTemplate.id}
+        onChange={(e) =>
+          setSelectedTemplate(templates.find((t) => t.id === e.target.value))
+        }
+        className="mb-4 p-2 border rounded"
+      >
+        {templates.map((template) => (
+          <option key={template.id} value={template.id}>
+            {template.name}
+          </option>
+        ))}
+      </select>
+      {resumeData && (
+        <div className="mt-4">{selectedTemplate.generate(resumeData)}</div>
+      )}
+      {/* // Add a button in page.js: */}
     </div>
   );
 }
