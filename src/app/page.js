@@ -80,7 +80,7 @@ export default function Home() {
    };
 
    return (
-      <div className="p-8 pt-20">
+      <div className="p-8 pt-40 mx-20" >
          <h1 className="text-3xl mb-4">Resume Formatter</h1>
          <form onSubmit={handleSubmit} className="mb-8">
             <input type="file" accept=".docx" onChange={handleFileChange} />
@@ -101,7 +101,7 @@ export default function Home() {
                   templates.find((t) => t.id === e.target.value)
                )
             }
-            className="mb-4 p-2 border rounded"
+            className="mb-4 p-2 border rounded "
          >
             {templates.map((template) => (
                <option key={template.id} value={template.id}>
@@ -113,14 +113,14 @@ export default function Home() {
             <div className="mt-4">{selectedTemplate.generate(resumeData)}</div>
          )} */}
          {resumeData && (
-            <div className="mt-4">
-               {selectedTemplate.generate(resumeData)}
+            <div className="mt-4 border border-slate-300 shadow-xl w-[48rem] justify-self-center">
                <button
                   onClick={handleDownload}
                   className="ml-4 bg-green-500 text-white p-2 rounded"
                >
                   Download Resume
                </button>
+               {selectedTemplate.generate(resumeData)}
             </div>
          )}{" "}
       </div>

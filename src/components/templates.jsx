@@ -1,7 +1,16 @@
 import React from "react";
 
 const TemplateOne = ({ data }) => {
-   if (!data) return null;
+   console.log("TemplateOne Component - Received Data:", data);
+
+   if (!data) {
+      console.log("TemplateOne - No data received");
+      return null;
+   }
+
+   // Try parsing the data if it's a string
+   const resumeData = typeof data === "string" ? JSON.parse(data) : data;
+   console.log("TemplateOne - Parsed Data:", resumeData);
 
    // const resumeData = typeof data === "string" ? JSON.parse(data) : data;
 
@@ -30,7 +39,8 @@ const TemplateOne = ({ data }) => {
    // const personalInfo = basicInfo ? extractInfo(basicInfo.content) : {};
 
    return (
-      <div className="bg-white text-black p-8 rounded-lg">
+      <div className="bg-white text-black p-8 rounded-lg font-[Calibri]">
+         {/* Personal info header */}
          <div className="text-center space-y-2 mb-6">
             <div className="text-center space-y-2 mb-6">
                {data && data.personalInfo && data.personalInfo.name && (
@@ -48,11 +58,12 @@ const TemplateOne = ({ data }) => {
                   <p className="text-gray-600">{data.personalInfo.location}</p>
                )}
                {data && data.summary && data.summary && (
-                  <p className="text-gray-700 mt-2">{data.summary}</p>
+                  <p className="text-gray-700 mt-2 text-left">{data.summary}</p>
                )}
             </div>
          </div>
 
+         {/* workExperience */}
          {data.workExperience?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">
@@ -66,16 +77,19 @@ const TemplateOne = ({ data }) => {
                      <p>
                         {exp.startDate} - {exp.endDate || "Present"}
                      </p>
-                     {exp.responsibilities.map((resp, j) => (
-                        <li key={j} className="text-sm">
-                           {resp}
-                        </li>
-                     ))}
+                     <ul className="list-disc ml-6 mt-2">
+                        {exp.responsibilities.map((resp, j) => (
+                           <li key={j} className="text-sm">
+                              {resp}
+                           </li>
+                        ))}
+                     </ul>
                   </div>
                ))}
             </div>
          )}
 
+         {/* education */}
          {data.education?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">Education</h2>
@@ -91,6 +105,7 @@ const TemplateOne = ({ data }) => {
                ))}
             </div>
          )}
+
          {/* Skills */}
          {data.skills &&
             (data.skills.technical?.length > 0 ||
@@ -103,10 +118,11 @@ const TemplateOne = ({ data }) => {
                   {data.skills.technical?.length > 0 && (
                      <div>
                         {data.skills.technical.map((category, index) => (
-                           <div key={index} className="ml-4">
-                              <h4 className="text-sm font-medium">
+                           <div key={index} className="ml-4 mb-2">
+                              <h4 className="text-sm  font-semibold">
                                  {category.category}:
                               </h4>
+
                               <p className="text-sm">
                                  {category.skills.join(", ")}
                               </p>
@@ -135,6 +151,7 @@ const TemplateOne = ({ data }) => {
                </div>
             )}
 
+         {/* certifications */}
          {data.certifications?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">
@@ -152,6 +169,7 @@ const TemplateOne = ({ data }) => {
             </div>
          )}
 
+         {/* projects */}
          {data.projects?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">Projects</h2>
@@ -165,6 +183,7 @@ const TemplateOne = ({ data }) => {
             </div>
          )}
 
+         {/* Additional sections */}
          {data.additionalSections?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">
@@ -420,7 +439,7 @@ const TemplateThree = ({ data }) => {
    console.log("TemplateThree - Parsed Data:", resumeData);
 
    return (
-      <div className="bg-white font-sans text-black p-8 rounded-lg">
+      <div className="bg-white font-cambria text-black p-8 rounded-lg">
          <div className="space-y-6">
             {/* Header Section */}
             <div className="text-center text-xl font-bold space-y-2 font-serif">

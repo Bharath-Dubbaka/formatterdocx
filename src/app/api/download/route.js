@@ -15,6 +15,8 @@ export async function POST(req) {
       doc = generateDocxForTemplateOne(data);
    } else if (templateId === "template-two") {
       doc = generateDocxForTemplateTwo(data);
+   } else if (templateId === "template-three") {
+      doc = generateDocxForTemplateThree(data);
    }
    // Add more conditions for other templates
 
@@ -206,6 +208,231 @@ export function generateDocxForTemplateOne(data) {
                              ],
                              spacing: { after: 100 },
                           }),
+                       ]),
+                    ]
+                  : []),
+
+               // Skills Section (Updated for New Structure)
+               ...(data.skills?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Skills",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.skills.flatMap((category) =>
+                          category.category && category.skills.length > 0
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `${
+                                              category.category
+                                           }: ${category.skills.join(", ")}`,
+                                           size: 24,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : []
+                       ),
+                    ]
+                  : []),
+
+               // Certifications Section
+               ...(data.certifications?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Certifications",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.certifications.flatMap((cert) =>
+                          cert.name && cert.issuer
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `${cert.name} - ${cert.issuer}`,
+                                           bold: true,
+                                           size: 24,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `${cert.issueDate || ""} - ${
+                                              cert.expiryDate || "No Expiry"
+                                           }`,
+                                           size: 20,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : []
+                       ),
+                    ]
+                  : []),
+
+               // Projects Section
+               ...(data.projects?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Projects",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.projects.flatMap((project) =>
+                          project.name && project.description
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `${project.name}`,
+                                           bold: true,
+                                           size: 24,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `${project.description}`,
+                                           size: 20,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                                  ...(project.technologies?.length > 0
+                                     ? [
+                                          new Paragraph({
+                                             children: [
+                                                new TextRun({
+                                                   text: `Technologies: ${project.technologies.join(
+                                                      ", "
+                                                   )}`,
+                                                   size: 20,
+                                                   font: "Calibri",
+                                                }),
+                                             ],
+                                             spacing: { after: 100 },
+                                          }),
+                                       ]
+                                     : []),
+                               ]
+                             : []
+                       ),
+                    ]
+                  : []),
+
+               // Additional Sections (Placed at the Bottom)
+               ...(data.additionalSections?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Additional Sections",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.additionalSections.flatMap((section) => [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: section.title,
+                                   bold: true,
+                                   size: 24,
+                                   font: "Calibri",
+                                }),
+                             ],
+                             spacing: { after: 100 },
+                          }),
+                          ...(typeof section.content === "string"
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: section.content,
+                                           size: 20,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : section.content.map(
+                                  (item) =>
+                                     new Paragraph({
+                                        children: [
+                                           new TextRun({
+                                              text: `• ${item}`,
+                                              size: 20,
+                                              font: "Calibri",
+                                           }),
+                                        ],
+                                        spacing: { after: 50 },
+                                     })
+                               )),
                        ]),
                     ]
                   : []),
