@@ -5,6 +5,7 @@ import {
    TextRun,
    AlignmentType,
    BorderStyle,
+   Header,
 } from "docx";
 
 export async function POST(req) {
@@ -34,52 +35,98 @@ export function generateDocxForTemplateOne(data) {
    const doc = new Document({
       sections: [
          {
+            // headerCard
+            headers: {
+               default: new Header({
+                  children: [
+                     new Paragraph({
+                        children: [
+                           new TextRun({
+                              text: data.personalInfo.name || "Resume",
+                              bold: true,
+                              size: 36,
+                              
+                              font: "Calibri",
+                           }),
+                        ],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 200 },
+                     }),
+                     new Paragraph({
+                        children: [
+                           new TextRun({
+                              text: [
+                                 data.personalInfo.phone,
+                                 data.personalInfo.email,
+                                 data.personalInfo.location,
+                              ]
+                                 .filter(Boolean)
+                                 .join(" | "),
+                              size: 24,
+                              font: "Calibri",
+                              
+                           }),
+                        ],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 200 },
+                     }),
+                  ],
+               }),
+            },
+
             properties: {
                page: {
                   margin: {
+                     //NARROW
                      top: 720,
                      right: 720,
                      bottom: 720,
                      left: 720,
+
+                     // MODERATE MARGINS
+                     // top: 1440, // 2.54 cm
+                     // right: 1083, // 1.91 cm
+                     // bottom: 1440, // 2.54 cm
+                     // left: 1083, // 1.91 cm
                   },
                },
             },
             children: [
                // Personal Information Header
-               ...(data.personalInfo
-                  ? [
-                       new Paragraph({
-                          children: [
-                             new TextRun({
-                                text: data.personalInfo.name || "Resume",
-                                bold: true,
-                                size: 36,
-                                font: "Calibri",
-                             }),
-                          ],
-                          alignment: AlignmentType.CENTER,
-                          spacing: { after: 200 },
-                       }),
-                       new Paragraph({
-                          children: [
-                             new TextRun({
-                                text: [
-                                   data.personalInfo.phone,
-                                   data.personalInfo.email,
-                                   data.personalInfo.location,
-                                ]
-                                   .filter(Boolean)
-                                   .join(" | "),
-                                size: 24,
-                                color: "666666",
-                                font: "Calibri",
-                             }),
-                          ],
-                          alignment: AlignmentType.CENTER,
-                          spacing: { after: 200 },
-                       }),
-                    ]
-                  : []),
+               // ...(data.personalInfo
+               //    ? [
+               //         new Paragraph({
+               //            children: [
+               //               new TextRun({
+               //                  text: data.personalInfo.name || "Resume",
+               //                  bold: true,
+               //                  size: 36,
+               //                  font: "Calibri",
+               //               }),
+               //            ],
+               //            alignment: AlignmentType.CENTER,
+               //            spacing: { after: 200 },
+               //         }),
+               //         new Paragraph({
+               //            children: [
+               //               new TextRun({
+               //                  text: [
+               //                     data.personalInfo.phone,
+               //                     data.personalInfo.email,
+               //                     data.personalInfo.location,
+               //                  ]
+               //                     .filter(Boolean)
+               //                     .join(" | "),
+               //                  size: 24,
+               //                  color: "666666",
+               //                  font: "Calibri",
+               //               }),
+               //            ],
+               //            alignment: AlignmentType.CENTER,
+               //            spacing: { after: 200 },
+               //         }),
+               //      ]
+               //    : []),
 
                // Summary
                ...(data.summary
@@ -87,8 +134,26 @@ export function generateDocxForTemplateOne(data) {
                        new Paragraph({
                           children: [
                              new TextRun({
+                                text: "Summary:",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
                                 text: data.summary,
-                                size: 24,
+                                size: 20,
                                 font: "Calibri",
                              }),
                           ],
@@ -130,7 +195,7 @@ export function generateDocxForTemplateOne(data) {
                                    font: "Calibri",
                                 }),
                              ],
-                             spacing: { after: 100 },
+                             spacing: { before: 200 },
                           }),
                           new Paragraph({
                              children: [
@@ -212,13 +277,13 @@ export function generateDocxForTemplateOne(data) {
                     ]
                   : []),
 
-               // Skills Section (Updated for New Structure)
-               ...(data.skills?.length > 0
+               // Skills Section - Handle technical skills with categories, including cases where skills array is empty
+               ...(data.skills?.technical && data.skills.technical.length > 0
                   ? [
                        new Paragraph({
                           children: [
                              new TextRun({
-                                text: "Skills",
+                                text: "Technical Skills",
                                 bold: true,
                                 size: 28,
                                 font: "Calibri",
@@ -233,24 +298,48 @@ export function generateDocxForTemplateOne(data) {
                              },
                           },
                        }),
-                       ...data.skills.flatMap((category) =>
-                          category.category && category.skills.length > 0
-                             ? [
-                                  new Paragraph({
-                                     children: [
-                                        new TextRun({
-                                           text: `${
-                                              category.category
-                                           }: ${category.skills.join(", ")}`,
-                                           size: 24,
-                                           font: "Calibri",
-                                        }),
-                                     ],
-                                     spacing: { after: 100 },
-                                  }),
-                               ]
-                             : []
-                       ),
+                       // First, handle categories with sub-skills (keep them in rows)
+                       ...data.skills.technical
+                          .filter((category) => category.skills.length > 0)
+                          .map(
+                             (category) =>
+                                new Paragraph({
+                                   children: [
+                                      new TextRun({
+                                         text: `${
+                                            category.category
+                                         }: ${category.skills.join(", ")}`,
+                                         size: 20,
+                                         font: "Calibri",
+                                      }),
+                                   ],
+                                   spacing: { after: 100 },
+                                })
+                          ),
+
+                       // Then, handle categories without sub-skills (merge them into a single line)
+                       ...(data.skills.technical.some(
+                          (category) => category.skills.length === 0
+                       )
+                          ? [
+                               new Paragraph({
+                                  children: [
+                                     new TextRun({
+                                        text: data.skills.technical
+                                           .filter(
+                                              (category) =>
+                                                 category.skills.length === 0
+                                           )
+                                           .map((category) => category.category)
+                                           .join(", "), // Join all categories without sub-skills into one line
+                                        size: 20,
+                                        font: "Calibri",
+                                     }),
+                                  ],
+                                  spacing: { after: 100 },
+                               }),
+                            ]
+                          : []),
                     ]
                   : []),
 
@@ -276,7 +365,7 @@ export function generateDocxForTemplateOne(data) {
                           },
                        }),
                        ...data.certifications.flatMap((cert) =>
-                          cert.name && cert.issuer
+                          cert.name 
                              ? [
                                   new Paragraph({
                                      children: [

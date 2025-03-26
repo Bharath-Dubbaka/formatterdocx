@@ -41,33 +41,44 @@ const TemplateOne = ({ data }) => {
    return (
       <div className="bg-white text-black p-8 rounded-lg font-[Calibri]">
          {/* Personal info header */}
-         <div className="text-center space-y-2 mb-6">
+         <div className="text-center space-y-2 mb-6 text-neutral-500">
             <div className="text-center space-y-2 mb-6">
                {data && data.personalInfo && data.personalInfo.name && (
                   <h1 className="text-2xl font-bold">
                      {data.personalInfo.name}
                   </h1>
                )}
-               {data && data.personalInfo && data.personalInfo.phone && (
-                  <p className="text-gray-600">{data.personalInfo.phone}</p>
-               )}
-               {data && data.personalInfo && data.personalInfo.email && (
-                  <p className="text-gray-600">{data.personalInfo.email}</p>
-               )}
-               {data && data.personalInfo && data.personalInfo.location && (
-                  <p className="text-gray-600">{data.personalInfo.location}</p>
-               )}
-               {data && data.summary && data.summary && (
-                  <p className="text-gray-700 mt-2 text-left">{data.summary}</p>
-               )}
+               <div className="flex flex-wrap justify-center">
+                  {data && data.personalInfo && data.personalInfo.phone && (
+                     <p className="text-gray-600">{data.personalInfo.phone}</p>
+                  )}
+                  {data && data.personalInfo && data.personalInfo.email && (
+                     <p className="text-gray-600">
+                        | {data.personalInfo.email}
+                     </p>
+                  )}
+                  {data && data.personalInfo && data.personalInfo.location && (
+                     <p className="text-gray-600">
+                        | {data.personalInfo.location}
+                     </p>
+                  )}
+               </div>
             </div>
          </div>
+
+         {/* Professional Summary */}
+         {data?.summary && (
+            <div className="mb-6">
+               <h2 className="text-xl font-bold border-b-2 mb-2">Summary</h2>
+               <p className="text-sm">{data.summary}</p>
+            </div>
+         )}
 
          {/* workExperience */}
          {data.workExperience?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">
-                  Work Experience
+                  Work Experience:
                </h2>
                {data.workExperience.map((exp, i) => (
                   <div key={i} className="ml-4 mb-4">

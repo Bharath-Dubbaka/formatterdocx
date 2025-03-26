@@ -92,7 +92,7 @@ Return only the valid JSON object, no commentary.`,
             },
          ],
          temperature: 0.3, // Lower temperature for more consistent results
-         max_tokens: 6000, // Ensure enough tokens for thorough processing
+         max_tokens: 9000, // Ensure enough tokens for thorough processing
       });
 
       const structuredData = JSON.parse(response.choices[0].message.content);
