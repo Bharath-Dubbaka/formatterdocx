@@ -20,8 +20,6 @@ export const templates = [
 ];
 
 const TemplateOne = ({ data }) => {
-   console.log("TemplateOne Component - Received Data:", data);
-
    if (!data) {
       console.log("TemplateOne - No data received");
       return null;
@@ -236,8 +234,6 @@ const TemplateOne = ({ data }) => {
 };
 
 const TemplateTwo = ({ data }) => {
-   console.log("TemplateTwo Component - Received Data:", data);
-
    if (!data) {
       console.log("TemplateTwo - No data received");
       return null;
@@ -450,8 +446,6 @@ const TemplateTwo = ({ data }) => {
 };
 
 const TemplateThree = ({ data }) => {
-   console.log("TemplateThree Component - Received Data:", data);
-
    if (!data) {
       console.log("TemplateThree - No data received");
       return null;

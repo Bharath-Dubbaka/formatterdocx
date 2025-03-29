@@ -9,26 +9,82 @@ import {
 } from "docx";
 
 export async function POST(req) {
-   const { data, templateId } = await req.json();
-   let doc;
-
-   if (templateId === "template-one") {
-      doc = generateDocxForTemplateOne(data);
-   } else if (templateId === "template-two") {
-      doc = generateDocxForTemplateTwo(data);
-   } else if (templateId === "template-three") {
-      doc = generateDocxForTemplateThree(data);
-   }
-   // Add more conditions for other templates
-
-   const buffer = await Packer.toBuffer(doc);
-   const response = new Response(buffer);
-   response.headers.set("Content-Type", "application/octet-stream");
-   response.headers.set(
-      "Content-Disposition",
-      "attachment; filename=formatted_resume.docx"
+   // Generate a unique ID for this request for logging
+   const requestId = Math.random().toString(36).substring(2, 15);
+   console.log(
+      `[${requestId}] New download request received inside download/route.js`
    );
-   return response;
+
+   try {
+      const { data, templateId } = await req.json();
+      console.log(
+         `[${requestId}] API received request for template:`,
+         templateId
+      );
+
+      // Debug data size
+      console.log(`[${requestId}] Data size:`, JSON.stringify(data).length);
+
+      let doc;
+      if (templateId === "template-one") {
+         doc = generateDocxForTemplateOne(data);
+      } else if (templateId === "template-two") {
+         doc = generateDocxForTemplateTwo(data);
+      } else if (templateId === "template-three") {
+         doc = generateDocxForTemplateThree(data);
+      } else {
+         throw new Error(`Unknown template ID: ${templateId}`);
+      }
+
+      if (!doc) {
+         throw new Error("Document generation failed");
+      }
+
+      console.log(`[${requestId}] Document generated successfully, packing...`);
+      const buffer = await Packer.toBuffer(doc);
+      console.log(`[${requestId}] Document packed, size:`, buffer.byteLength);
+
+      // Generate a unique filename to prevent any caching issues
+      const filename = `resume_${templateId}_${Date.now()}_${requestId}.docx`;
+      console.log(`[${requestId}] Preparing to send file:`, filename);
+
+      // Create response with the buffer
+      const headers = new Headers();
+      headers.set(
+         "Content-Type",
+         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      );
+      headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+      headers.set("Content-Length", buffer.byteLength.toString());
+
+      // Enhanced cache control
+      headers.set(
+         "Cache-Control",
+         "no-store, no-cache, must-revalidate, max-age=0"
+      );
+      headers.set("Pragma", "no-cache");
+      headers.set("Expires", "0");
+
+      // Add a custom header to further ensure no caching
+      headers.set("X-Request-ID", requestId);
+
+      const response = new Response(buffer, {
+         status: 200,
+         headers: headers,
+      });
+
+      console.log(`[${requestId}] Response created successfully, sending...`);
+      return response;
+   } catch (error) {
+      console.error(`[${requestId}] API error:`, error);
+      return new Response(JSON.stringify({ error: error.message, requestId }), {
+         status: 500,
+         headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+         },
+      });
+   }
 }
 
 export function generateDocxForTemplateOne(data) {

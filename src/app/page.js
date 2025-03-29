@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import mammoth from "mammoth";
 import { Button } from "../components/ui/button";
@@ -16,34 +16,117 @@ import { templates } from "../components/templates"; // Import templates
 import format from "./api/format/route";
 import { Loader2Icon } from "lucide-react";
 import { Packer } from "docx";
+import { saveAs } from "file-saver";
+
 export default function Home() {
    const [file, setFile] = useState(null);
    const [resumeData, setResumeData] = useState(null);
    const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
    const [isLoading, setIsLoading] = useState(false);
+   const [isDownloading, setIsDownloading] = useState(false);
+
+   useEffect(() => {
+      // Log when template changes to help with debugging
+      console.log("Template changed to:", selectedTemplate.id);
+   }, [selectedTemplate]);
+
+   const handleTemplateChange = (e) => {
+      const newTemplate = templates.find((t) => t.id === e.target.value);
+      console.log("Setting new template:", newTemplate.id);
+      setSelectedTemplate(newTemplate);
+   };
 
    const handleFileChange = (e) => setFile(e.target.files[0]);
 
    const handleDownload = async () => {
-      const response = await fetch("/api/download", {
-         method: "POST",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify({
-            data: resumeData,
-            templateId: selectedTemplate.id,
-         }),
-      });
+      setIsDownloading(true);
+      try {
+         // Add a unique timestamp to prevent caching
+         const timestamp = new Date().getTime();
+         console.log(
+            "Sending download request for template:",
+            selectedTemplate.id
+         );
+         console.log("Resume data size:", JSON.stringify(resumeData).length);
 
-      if (response.ok) {
+         const response = await fetch(`/api/download?t=${timestamp}`, {
+            method: "POST",
+            headers: {
+               "Content-Type": "application/json",
+               "Cache-Control": "no-cache, no-store, must-revalidate",
+               Pragma: "no-cache",
+               Expires: "0",
+            },
+            body: JSON.stringify({
+               data: resumeData,
+               templateId: selectedTemplate.id,
+            }),
+         });
+
+         console.log("Response status:", response.status);
+         console.log(
+            "Response headers:",
+            Object.fromEntries([...response.headers])
+         );
+
+         if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Response error text:", errorText);
+            throw new Error(
+               `Download failed: ${response.status} - ${
+                  errorText || "Unknown error"
+               }`
+            );
+         }
+
          const blob = await response.blob();
+         console.log("Received blob size:", blob.size, "type:", blob.type);
+
+         if (!blob || blob.size === 0) {
+            throw new Error("Received empty blob from server");
+         }
+
+         // Create a download link manually with a random ID to ensure uniqueness
+         const downloadId = `download-${Math.random()
+            .toString(36)
+            .substring(2, 15)}`;
          const url = URL.createObjectURL(blob);
-         const a = document.createElement("a");
-         a.href = url;
-         a.download = "formatted_resume.docx";
-         a.click();
-         URL.revokeObjectURL(url);
-      } else {
-         console.error("Error downloading file");
+
+         // Remove any existing download link with the same ID
+         const existingLink = document.getElementById(downloadId);
+         if (existingLink) {
+            document.body.removeChild(existingLink);
+         }
+
+         // Create a new download link
+         const downloadLink = document.createElement("a");
+         downloadLink.id = downloadId;
+         downloadLink.href = url;
+         downloadLink.download = `resume_${selectedTemplate.id}_${timestamp}.docx`;
+         downloadLink.style.display = "none";
+         document.body.appendChild(downloadLink);
+
+         // Force a click event
+         downloadLink.click();
+
+         // Clean up after a delay
+         setTimeout(() => {
+            if (document.body.contains(downloadLink)) {
+               document.body.removeChild(downloadLink);
+            }
+            URL.revokeObjectURL(url);
+            console.log(
+               `Download link ${downloadId} removed and blob URL revoked`
+            );
+         }, 2000);
+
+         console.log("Download initiated with ID:", downloadId);
+         console.log("Download completed successfully");
+      } catch (error) {
+         console.error("Download error:", error);
+         alert(`Failed to download: ${error.message}`);
+      } finally {
+         setIsDownloading(false);
       }
    };
 
@@ -95,12 +178,8 @@ export default function Home() {
          {isLoading && <p>Loading...</p>} {/* Simple loading indicator */}
          <select
             value={selectedTemplate.id}
-            onChange={(e) =>
-               setSelectedTemplate(
-                  templates.find((t) => t.id === e.target.value)
-               )
-            }
-            className="mb-4 p-2 border rounded "
+            onChange={handleTemplateChange}
+            className="mb-4 p-2 border rounded"
          >
             {templates.map((template) => (
                <option key={template.id} value={template.id}>
@@ -113,8 +192,9 @@ export default function Home() {
                <button
                   onClick={handleDownload}
                   className="ml-4 bg-green-500 text-white p-2 rounded"
+                  disabled={isDownloading}
                >
-                  Download Resume
+                  {isDownloading ? "Downloading..." : "Download Resume"}
                </button>
                {selectedTemplate.generate(resumeData)}
             </div>
