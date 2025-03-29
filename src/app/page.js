@@ -15,7 +15,6 @@ import Preview from "../components/Preview";
 import { templates } from "../components/templates"; // Import templates
 import format from "./api/format/route";
 import { Loader2Icon } from "lucide-react";
-import { generateDocxForTemplateOne } from "./api/download/route";
 import { Packer } from "docx";
 export default function Home() {
    const [file, setFile] = useState(null);
@@ -80,7 +79,7 @@ export default function Home() {
    };
 
    return (
-      <div className="p-8 pt-40 mx-20" >
+      <div className="p-8 pt-40 mx-20">
          <h1 className="text-3xl mb-4">Resume Formatter</h1>
          <form onSubmit={handleSubmit} className="mb-8">
             <input type="file" accept=".docx" onChange={handleFileChange} />
@@ -109,9 +108,6 @@ export default function Home() {
                </option>
             ))}
          </select>
-         {/* {resumeData && (
-            <div className="mt-4">{selectedTemplate.generate(resumeData)}</div>
-         )} */}
          {resumeData && (
             <div className="mt-4 border border-slate-300 shadow-xl w-[48rem] justify-self-center">
                <button

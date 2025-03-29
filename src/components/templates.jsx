@@ -1,5 +1,24 @@
 import React from "react";
 
+// Templates Array
+export const templates = [
+   {
+      id: "template-one",
+      name: "Template One",
+      generate: (data) => <TemplateOne data={data} />,
+   },
+   {
+      id: "template-two",
+      name: "Template Two",
+      generate: (data) => <TemplateTwo data={data} />,
+   },
+   {
+      id: "template-three",
+      name: "Template Three",
+      generate: (data) => <TemplateThree data={data} />,
+   },
+];
+
 const TemplateOne = ({ data }) => {
    console.log("TemplateOne Component - Received Data:", data);
 
@@ -8,35 +27,8 @@ const TemplateOne = ({ data }) => {
       return null;
    }
 
-   // Try parsing the data if it's a string
    const resumeData = typeof data === "string" ? JSON.parse(data) : data;
    console.log("TemplateOne - Parsed Data:", resumeData);
-
-   // const resumeData = typeof data === "string" ? JSON.parse(data) : data;
-
-   // Basic info extraction
-   // const basicInfo = resumeData.sections.find(
-   //   (s) => s.content.includes("Cell:") || s.content.includes("Email:")
-   // );
-
-   // const extractInfo = (content) => {
-   //   const lines = content.split("\n");
-   //   return {
-   //     name: lines[0]?.trim() || "",
-   //     phone:
-   //       lines
-   //         .find((l) => l.includes("Cell:"))
-   //         ?.replace("Cell:", "")
-   //         .trim() || "",
-   //     email:
-   //       lines
-   //         .find((l) => l.includes("Email:"))
-   //         ?.replace("Email:", "")
-   //         .trim() || "",
-   //   };
-   // };
-
-   // const personalInfo = basicInfo ? extractInfo(basicInfo.content) : {};
 
    return (
       <div className="bg-white text-black p-8 rounded-lg font-[Calibri]">
@@ -78,7 +70,7 @@ const TemplateOne = ({ data }) => {
          {data.workExperience?.length > 0 && (
             <div className="mb-6">
                <h2 className="text-xl font-bold border-b-2 mb-2">
-                  Work Experience:
+                  Work Experience
                </h2>
                {data.workExperience.map((exp, i) => (
                   <div key={i} className="ml-4 mb-4">
@@ -107,7 +99,7 @@ const TemplateOne = ({ data }) => {
                {data.education.map((edu, i) => (
                   <div key={i} className="ml-4 mb-4">
                      <p className="font-bold">
-                        {edu.degree} - {edu.institution} - {edu.location}
+                        {edu.degree} - {edu.institution}
                      </p>
                      <p>
                         {edu.startDate} - {edu.endDate || "Present"}
@@ -119,42 +111,62 @@ const TemplateOne = ({ data }) => {
 
          {/* Skills */}
          {data.skills &&
-            (data.skills.technical?.length > 0 ||
-               data.skills.soft?.length > 0 ||
-               data.skills.languages?.length > 0) && (
+            ((data.skills.technical && data.skills.technical.length > 0) ||
+               (data.skills.soft && data.skills.soft.length > 0) ||
+               (data.skills.languages && data.skills.languages.length > 0)) && (
                <div className="mb-6">
-                  <h2 className="text-xl font-bold border-b-2 mb-2">Skills</h2>
+                  <h2 className="text-xl font-bold border-b-2 mb-2">
+                     Technical Skills
+                  </h2>
 
-                  {/* Technical Skills */}
+                  {/* Technical Skills with Categories */}
                   {data.skills.technical?.length > 0 && (
                      <div>
-                        {data.skills.technical.map((category, index) => (
-                           <div key={index} className="ml-4 mb-2">
-                              <h4 className="text-sm  font-semibold">
-                                 {category.category}:
-                              </h4>
+                        {data.skills.technical
+                           .filter((category) => category.skills.length > 0)
+                           .map((category, index) => (
+                              <div key={index} className="ml-4 mb-2">
+                                 <p className="text-sm">
+                                    {category.category}:{" "}
+                                    {category.skills.join(", ")}
+                                 </p>
+                              </div>
+                           ))}
 
+                        {/* Handle categories without skills */}
+                        {data.skills.technical.some(
+                           (category) => category.skills.length === 0
+                        ) && (
+                           <div className="ml-4 mb-2">
                               <p className="text-sm">
-                                 {category.skills.join(", ")}
+                                 {data.skills.technical
+                                    .filter(
+                                       (category) =>
+                                          category.skills.length === 0
+                                    )
+                                    .map((category) => category.category)
+                                    .join(", ")}
                               </p>
                            </div>
-                        ))}
+                        )}
                      </div>
                   )}
 
                   {/* Soft Skills */}
                   {data.skills.soft?.length > 0 && (
-                     <div>
-                        <h3 className="font-semibold">Soft Skills</h3>
-                        <p className="ml-4">{data.skills.soft.join(", ")}</p>
+                     <div className="mt-2">
+                        <h3 className="font-semibold text-sm">Soft Skills</h3>
+                        <p className="ml-4 text-sm">
+                           {data.skills.soft.join(", ")}
+                        </p>
                      </div>
                   )}
 
                   {/* Languages */}
                   {data.skills.languages?.length > 0 && (
-                     <div>
-                        <h3 className="font-semibold">Languages</h3>
-                        <p className="ml-4">
+                     <div className="mt-2">
+                        <h3 className="font-semibold text-sm">Languages</h3>
+                        <p className="ml-4 text-sm">
                            {data.skills.languages.join(", ")}
                         </p>
                      </div>
@@ -170,8 +182,9 @@ const TemplateOne = ({ data }) => {
                </h2>
                {data.certifications.map((cert, i) => (
                   <div key={i} className="ml-4 mb-4">
-                     <p className="font-bold">{cert.name}</p>
-                     <p>{cert.issuer}</p>
+                     <p className="font-bold">
+                        {cert.name} - {cert.issuer}
+                     </p>
                      <p>
                         {cert.issueDate} - {cert.expiryDate || "No Expiry"}
                      </p>
@@ -188,7 +201,9 @@ const TemplateOne = ({ data }) => {
                   <div key={i} className="ml-4 mb-4">
                      <p className="font-bold">{project.name}</p>
                      <p>{project.description}</p>
-                     <p>Technologies: {project.technologies?.join(", ")}</p>
+                     {project.technologies?.length > 0 && (
+                        <p>Technologies: {project.technologies.join(", ")}</p>
+                     )}
                   </div>
                ))}
             </div>
@@ -219,8 +234,6 @@ const TemplateOne = ({ data }) => {
       </div>
    );
 };
-
-export default TemplateOne;
 
 const TemplateTwo = ({ data }) => {
    console.log("TemplateTwo Component - Received Data:", data);
@@ -286,7 +299,6 @@ const TemplateTwo = ({ data }) => {
                   </h2>
                   {resumeData.workExperience.map((exp, index) => (
                      <div key={index} className="mb-4">
-                        <hr />
                         <div className="flex justify-between items-start">
                            <div>
                               <h3 className="font-bold">{exp.roleTitle}</h3>
@@ -650,22 +662,3 @@ const TemplateThree = ({ data }) => {
       </div>
    );
 };
-
-// Templates Array
-export const templates = [
-   {
-      id: "template-one",
-      name: "Template One",
-      generate: (data) => <TemplateOne data={data} />,
-   },
-   {
-      id: "template-two",
-      name: "Template Two",
-      generate: (data) => <TemplateTwo data={data} />,
-   },
-   {
-      id: "template-three",
-      name: "Template Three",
-      generate: (data) => <TemplateThree data={data} />,
-   },
-];

@@ -45,7 +45,7 @@ export function generateDocxForTemplateOne(data) {
                               text: data.personalInfo.name || "Resume",
                               bold: true,
                               size: 36,
-                              
+
                               font: "Calibri",
                            }),
                         ],
@@ -64,7 +64,6 @@ export function generateDocxForTemplateOne(data) {
                                  .join(" | "),
                               size: 24,
                               font: "Calibri",
-                              
                            }),
                         ],
                         alignment: AlignmentType.CENTER,
@@ -92,42 +91,6 @@ export function generateDocxForTemplateOne(data) {
                },
             },
             children: [
-               // Personal Information Header
-               // ...(data.personalInfo
-               //    ? [
-               //         new Paragraph({
-               //            children: [
-               //               new TextRun({
-               //                  text: data.personalInfo.name || "Resume",
-               //                  bold: true,
-               //                  size: 36,
-               //                  font: "Calibri",
-               //               }),
-               //            ],
-               //            alignment: AlignmentType.CENTER,
-               //            spacing: { after: 200 },
-               //         }),
-               //         new Paragraph({
-               //            children: [
-               //               new TextRun({
-               //                  text: [
-               //                     data.personalInfo.phone,
-               //                     data.personalInfo.email,
-               //                     data.personalInfo.location,
-               //                  ]
-               //                     .filter(Boolean)
-               //                     .join(" | "),
-               //                  size: 24,
-               //                  color: "666666",
-               //                  font: "Calibri",
-               //               }),
-               //            ],
-               //            alignment: AlignmentType.CENTER,
-               //            spacing: { after: 200 },
-               //         }),
-               //      ]
-               //    : []),
-
                // Summary
                ...(data.summary
                   ? [
@@ -365,7 +328,7 @@ export function generateDocxForTemplateOne(data) {
                           },
                        }),
                        ...data.certifications.flatMap((cert) =>
-                          cert.name 
+                          cert.name
                              ? [
                                   new Paragraph({
                                      children: [
@@ -517,6 +480,998 @@ export function generateDocxForTemplateOne(data) {
                                               text: `• ${item}`,
                                               size: 20,
                                               font: "Calibri",
+                                           }),
+                                        ],
+                                        spacing: { after: 50 },
+                                     })
+                               )),
+                       ]),
+                    ]
+                  : []),
+            ],
+         },
+      ],
+   });
+
+   return doc;
+}
+
+export function generateDocxForTemplateTwo(data) {
+   const doc = new Document({
+      sections: [
+         {
+            properties: {
+               page: {
+                  margin: {
+                     top: 720,
+                     right: 720,
+                     bottom: 720,
+                     left: 720,
+                  },
+               },
+            },
+            children: [
+               // Header Section (Personal Info)
+               new Paragraph({
+                  children: [
+                     new TextRun({
+                        text: data.personalInfo?.name || "Resume",
+                        bold: true,
+                        size: 36,
+                        font: "Calibri",
+                     }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 200 },
+               }),
+               new Paragraph({
+                  children: [
+                     new TextRun({
+                        text: [
+                           data.personalInfo?.email,
+                           data.personalInfo?.location,
+                        ]
+                           .filter(Boolean)
+                           .join(" | "),
+                        size: 24,
+                        font: "Calibri",
+                     }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 400 },
+               }),
+
+               // Professional Summary
+               ...(data.summary
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Professional Summary",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: data.summary,
+                                size: 20,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 400 },
+                       }),
+                    ]
+                  : []),
+
+               // Skills Section - Handle technical skills with categories, including cases where skills array is empty
+               ...(data.skills?.technical && data.skills.technical.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Technical Skills",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       // First, handle categories with sub-skills (keep them in rows)
+                       ...data.skills.technical
+                          .filter((category) => category.skills.length > 0)
+                          .map(
+                             (category) =>
+                                new Paragraph({
+                                   children: [
+                                      new TextRun({
+                                         text: `${
+                                            category.category
+                                         }: ${category.skills.join(", ")}`,
+                                         size: 20,
+                                         font: "Calibri",
+                                      }),
+                                   ],
+                                   spacing: { after: 100 },
+                                })
+                          ),
+
+                       // Then, handle categories without sub-skills (merge them into a single line)
+                       ...(data.skills.technical.some(
+                          (category) => category.skills.length === 0
+                       )
+                          ? [
+                               new Paragraph({
+                                  children: [
+                                     new TextRun({
+                                        text: data.skills.technical
+                                           .filter(
+                                              (category) =>
+                                                 category.skills.length === 0
+                                           )
+                                           .map((category) => category.category)
+                                           .join(", "), // Join all categories without sub-skills into one line
+                                        size: 20,
+                                        font: "Calibri",
+                                     }),
+                                  ],
+                                  spacing: { after: 100 },
+                               }),
+                            ]
+                          : []),
+                    ]
+                  : []),
+
+               // Work Experience
+               ...(data.workExperience?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Work Experiences",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.workExperience.flatMap((exp) => [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: `${exp.roleTitle} - ${exp.employer}${
+                                      exp.location?.full
+                                         ? `, ${exp.location.full}`
+                                         : ""
+                                   }`,
+                                   bold: true,
+                                   size: 24,
+                                   font: "Calibri",
+                                }),
+                             ],
+                             spacing: { after: 100 },
+                          }),
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: `${exp.startDate} - ${
+                                      exp.endDate || "Present"
+                                   }`,
+                                   size: 20,
+                                   font: "Calibri",
+                                }),
+                             ],
+                             spacing: { after: 100 },
+                          }),
+                          ...(exp.responsibilities || []).map(
+                             (resp) =>
+                                new Paragraph({
+                                   children: [
+                                      new TextRun({
+                                         text: resp,
+                                         size: 20,
+                                         font: "Calibri",
+                                      }),
+                                   ],
+                                   bullet: { level: 0 },
+                                })
+                          ),
+                       ]),
+                    ]
+                  : []),
+
+               // Education
+               ...(data.education?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Education",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.education.map(
+                          (edu) =>
+                             new Paragraph({
+                                children: [
+                                   new TextRun({
+                                      text: `${edu.degree} - ${
+                                         edu.institution
+                                      } - ${edu.location}${
+                                         edu.startDate
+                                            ? `, ${edu.startDate}`
+                                            : ""
+                                      }`,
+                                      size: 20,
+                                      font: "Calibri",
+                                   }),
+                                ],
+                                spacing: { after: 100 },
+                                bullet: { level: 0 },
+                             })
+                       ),
+                    ]
+                  : []),
+
+               // Certifications
+               ...(data.certifications?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Certifications",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.certifications.map(
+                          (cert) =>
+                             new Paragraph({
+                                children: [
+                                   new TextRun({
+                                      text: `${cert.name}${
+                                         cert.issuer ? ` - ${cert.issuer}` : ""
+                                      }${
+                                         cert.issueDate
+                                            ? `, ${cert.issueDate}`
+                                            : ""
+                                      }${
+                                         cert.expiryDate
+                                            ? ` (Valid until: ${cert.expiryDate})`
+                                            : ""
+                                      }`,
+                                      size: 20,
+                                      font: "Calibri",
+                                   }),
+                                ],
+                                spacing: { after: 100 },
+                                bullet: { level: 0 },
+                             })
+                       ),
+                    ]
+                  : []),
+
+               // Languages
+               ...(data.skills?.languages?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Languages",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: data.skills.languages.join(", "),
+                                size: 20,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                       }),
+                    ]
+                  : []),
+
+               // Soft Skills
+               ...(data.skills?.soft?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Soft Skills",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: data.skills.soft.join(", "),
+                                size: 20,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                       }),
+                    ]
+                  : []),
+
+               // Projects
+               ...(data.projects?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Projects",
+                                bold: true,
+                                size: 28,
+                                font: "Calibri",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.projects.flatMap((project) => [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: project.name,
+                                   bold: true,
+                                   size: 24,
+                                   font: "Calibri",
+                                }),
+                             ],
+                             spacing: { after: 100 },
+                          }),
+                          ...(project.description
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: project.description,
+                                           size: 20,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : []),
+                          ...(project.technologies?.length > 0
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `Technologies: ${project.technologies.join(
+                                              ", "
+                                           )}`,
+                                           size: 20,
+                                           font: "Calibri",
+                                        }),
+                                     ],
+                                     spacing: { after: 200 },
+                                  }),
+                               ]
+                             : []),
+                       ]),
+                    ]
+                  : []),
+
+               // Additional Sections
+               ...(data.additionalSections?.flatMap((section) => [
+                  new Paragraph({
+                     children: [
+                        new TextRun({
+                           text: section.title,
+                           bold: true,
+                           size: 28,
+                           font: "Calibri",
+                        }),
+                     ],
+                     spacing: { after: 200 },
+                     border: {
+                        bottom: {
+                           color: "999999",
+                           size: 1,
+                           style: BorderStyle.SINGLE,
+                        },
+                     },
+                  }),
+                  ...(Array.isArray(section.content)
+                     ? section.content.map(
+                          (item) =>
+                             new Paragraph({
+                                children: [
+                                   new TextRun({
+                                      text: item,
+                                      size: 20,
+                                      font: "Calibri",
+                                   }),
+                                ],
+                                bullet: { level: 0 },
+                             })
+                       )
+                     : [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: section.content,
+                                   size: 20,
+                                   font: "Calibri",
+                                }),
+                             ],
+                          }),
+                       ]),
+               ]) || []),
+            ],
+         },
+      ],
+   });
+
+   return doc;
+}
+
+export function generateDocxForTemplateThree(data) {
+   const doc = new Document({
+      sections: [
+         {
+            properties: {
+               page: {
+                  margin: {
+                     top: 720,
+                     right: 720,
+                     bottom: 720,
+                     left: 720,
+                  },
+               },
+            },
+            children: [
+               // Header Section
+               new Paragraph({
+                  children: [
+                     new TextRun({
+                        text: data.personalInfo.name || "Resume",
+                        bold: true,
+                        size: 36,
+                        font: "Cambria",
+                     }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 200 },
+               }),
+               new Paragraph({
+                  children: [
+                     new TextRun({
+                        text: [
+                           data.personalInfo.phone,
+                           data.personalInfo.email,
+                           data.personalInfo.location,
+                        ]
+                           .filter(Boolean)
+                           .join(" | "),
+                        size: 24,
+                        font: "Cambria",
+                     }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 200 },
+               }),
+
+               // Professional Summary
+               ...(data.summary
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Professional Summary",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: data.summary,
+                                size: 20,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { after: 200 },
+                       }),
+                    ]
+                  : []),
+
+               // Skills Section - Handle technical skills with categories, including cases where skills array is empty
+               ...(data.skills?.technical && data.skills.technical.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Technical Skills",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       // First, handle categories with sub-skills (keep them in rows)
+                       ...data.skills.technical
+                          .filter((category) => category.skills.length > 0)
+                          .map(
+                             (category) =>
+                                new Paragraph({
+                                   children: [
+                                      new TextRun({
+                                         text: `${
+                                            category.category
+                                         }: ${category.skills.join(", ")}`,
+                                         size: 20,
+                                         font: "Cambria",
+                                      }),
+                                   ],
+                                   spacing: { after: 100 },
+                                })
+                          ),
+
+                       // Then, handle categories without sub-skills (merge them into a single line)
+                       ...(data.skills.technical.some(
+                          (category) => category.skills.length === 0
+                       )
+                          ? [
+                               new Paragraph({
+                                  children: [
+                                     new TextRun({
+                                        text: data.skills.technical
+                                           .filter(
+                                              (category) =>
+                                                 category.skills.length === 0
+                                           )
+                                           .map((category) => category.category)
+                                           .join(", "), // Join all categories without sub-skills into one line
+                                        size: 20,
+                                        font: "Cambria",
+                                     }),
+                                  ],
+                                  spacing: { after: 100 },
+                               }),
+                            ]
+                          : []),
+                    ]
+                  : []),
+
+               // Work Experiences
+               ...(data.workExperience?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Work Experiences",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.workExperience.flatMap((exp) => [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: `${exp.roleTitle || ""} - ${
+                                      exp.employer || ""
+                                   }${
+                                      exp.location?.full
+                                         ? `, ${exp.location.full}`
+                                         : ""
+                                   }`,
+                                   bold: true,
+                                   size: 24,
+                                   font: "Cambria",
+                                }),
+                             ],
+                             spacing: { before: 200, after: 100 },
+                          }),
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: `${exp.startDate || ""} - ${
+                                      exp.endDate || "Present"
+                                   }`,
+                                   size: 20,
+                                   font: "Cambria",
+                                }),
+                             ],
+                             spacing: { after: 100 },
+                          }),
+                          ...(exp.responsibilities || []).map(
+                             (resp) =>
+                                new Paragraph({
+                                   children: [
+                                      new TextRun({
+                                         text: resp,
+                                         size: 20,
+                                         font: "Cambria",
+                                      }),
+                                   ],
+                                   bullet: { level: 0 },
+                                })
+                          ),
+                       ]),
+                    ]
+                  : []),
+
+               // Education
+               ...(data.education?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Education",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.education.map(
+                          (edu) =>
+                             new Paragraph({
+                                children: [
+                                   new TextRun({
+                                      text: `${edu.degree || ""} - ${
+                                         edu.institution || ""
+                                      } ${edu.location || ""}`,
+                                      size: 20,
+                                      font: "Cambria",
+                                   }),
+                                   new TextRun({
+                                      text: `${edu.startDate || ""} - ${
+                                         edu.endDate || ""
+                                      }`,
+                                      size: 18,
+                                      color: "666666",
+                                      font: "Cambria",
+                                   }),
+                                ],
+                             })
+                       ),
+                    ]
+                  : []),
+
+               // Certifications
+               ...(data.certifications?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Certifications",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.certifications.map(
+                          (cert) =>
+                             new Paragraph({
+                                children: [
+                                   new TextRun({
+                                      text: `${cert.name || ""} ${
+                                         cert.issuer ? `- ${cert.issuer}` : ""
+                                      }`,
+                                      size: 20,
+                                      font: "Cambria",
+                                   }),
+                                   new TextRun({
+                                      text: `${cert.issueDate || ""} ${
+                                         cert.expiryDate
+                                            ? `- Valid until: ${cert.expiryDate}`
+                                            : ""
+                                      }`,
+                                      size: 18,
+                                      color: "666666",
+                                      font: "Cambria",
+                                   }),
+                                ],
+                             })
+                       ),
+                    ]
+                  : []),
+
+               // Languages
+               ...(data.skills?.languages?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Languages",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: data.skills.languages.join(", "),
+                                size: 20,
+                                font: "Cambria",
+                             }),
+                          ],
+                       }),
+                    ]
+                  : []),
+
+               // Soft Skills
+               ...(data.skills?.soft?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Soft Skills",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: data.skills.soft.join(", "),
+                                size: 20,
+                                font: "Cambria",
+                             }),
+                          ],
+                       }),
+                    ]
+                  : []),
+
+               // Projects
+               ...(data.projects?.length > 0
+                  ? [
+                       new Paragraph({
+                          children: [
+                             new TextRun({
+                                text: "Projects",
+                                bold: true,
+                                size: 28,
+                                font: "Cambria",
+                             }),
+                          ],
+                          spacing: { before: 400, after: 200 },
+                          border: {
+                             bottom: {
+                                color: "999999",
+                                size: 1,
+                                style: BorderStyle.SINGLE,
+                             },
+                          },
+                       }),
+                       ...data.projects.flatMap((project) => [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: project.name,
+                                   bold: true,
+                                   size: 24,
+                                   font: "Cambria",
+                                }),
+                             ],
+                             spacing: { after: 100 },
+                          }),
+                          ...(project.description
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: project.description,
+                                           size: 20,
+                                           font: "Cambria",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : []),
+                          ...(project.technologies?.length > 0
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: `Technologies: ${project.technologies.join(
+                                              ", "
+                                           )}`,
+                                           size: 20,
+                                           font: "Cambria",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : []),
+                       ]),
+                    ]
+                  : []),
+
+               // Additional Sections
+               ...(data.additionalSections?.length > 0
+                  ? [
+                       ...data.additionalSections.flatMap((section) => [
+                          new Paragraph({
+                             children: [
+                                new TextRun({
+                                   text: section.title,
+                                   bold: true,
+                                   size: 28,
+                                   font: "Cambria",
+                                }),
+                             ],
+                             spacing: { before: 400, after: 200 },
+                             border: {
+                                bottom: {
+                                   color: "999999",
+                                   size: 1,
+                                   style: BorderStyle.SINGLE,
+                                },
+                             },
+                          }),
+                          ...(typeof section.content === "string"
+                             ? [
+                                  new Paragraph({
+                                     children: [
+                                        new TextRun({
+                                           text: section.content,
+                                           size: 20,
+                                           font: "Cambria",
+                                        }),
+                                     ],
+                                     spacing: { after: 100 },
+                                  }),
+                               ]
+                             : section.content.map(
+                                  (item) =>
+                                     new Paragraph({
+                                        children: [
+                                           new TextRun({
+                                              text: `• ${item}`,
+                                              size: 20,
+                                              font: "Cambria",
                                            }),
                                         ],
                                         spacing: { after: 50 },
