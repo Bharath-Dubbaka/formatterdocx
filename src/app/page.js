@@ -1,378 +1,205 @@
 "use client";
-import Image from "next/image";
-// import Card from "../components/ui/card";
-// import CardHeader from "../components/ui/card-header";
-// import CardTitle from "../components/ui/card-title";
-import { Upload } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import mammoth from "mammoth";
+import { Button } from "../components/ui/button";
 import useAuth from "../hooks/useAuth";
 import ResumeService from "../services/ResumeService";
 import {
-  setOriginalText,
-  setParsedSections,
-  setLoading,
-  setError,
+   setOriginalText,
+   setParsedSections,
+   setLoading,
+   setError,
 } from "../store/slices/resumeSlice";
-import mammoth from 'mammoth';
+import Preview from "../components/Preview";
+import { templates } from "../components/templates"; // Import templates
+import format from "./api/format/route";
+import { Loader2Icon } from "lucide-react";
+import { Packer } from "docx";
+import { saveAs } from "file-saver";
 import TemplateService from "../services/TemplateService";
 
 export default function Home() {
-  useAuth();
+   const [file, setFile] = useState(null);
+   const [resumeData, setResumeData] = useState(null);
+   const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
+   const [isLoading, setIsLoading] = useState(false);
+   const [isDownloading, setIsDownloading] = useState(false);
 
-  const dispatch = useDispatch();
-  const [file, setFile] = useState(null);
-  const { user } = useSelector((state) => state.auth);
-  const { loading, error, parsedSections } = useSelector((state) => state.resume);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [mappedSections, setMappedSections] = useState({});
-  const [processing, setProcessing] = useState(false);
-  const [templates, setTemplates] = useState(TemplateService.defaultTemplates);
+   useEffect(() => {
+      // Log when template changes to help with debugging
+      console.log("Template changed to:", selectedTemplate.id);
+   }, [selectedTemplate]);
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      const validTypes = [
-        'application/msword',                                                     // .doc
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
-      ];
-      
-      if (!validTypes.includes(selectedFile.type)) {
-        dispatch(setError('Please upload a Word document (.doc or .docx)'));
-        return;
+   const handleTemplateChange = (e) => {
+      const newTemplate = templates.find((t) => t.id === e.target.value);
+      console.log("Setting new template:", newTemplate.id);
+      setSelectedTemplate(newTemplate);
+   };
+
+   const handleFileChange = (e) => setFile(e.target.files[0]);
+
+   const handleDownload = async () => {
+      setIsDownloading(true);
+      try {
+         // Add a unique timestamp to prevent caching
+         const timestamp = new Date().getTime();
+         console.log(
+            "Sending download request for template:",
+            selectedTemplate.id
+         );
+         console.log("Resume data size:", JSON.stringify(resumeData).length);
+
+         const response = await fetch(`/api/download?t=${timestamp}`, {
+            method: "POST",
+            headers: {
+               "Content-Type": "application/json",
+               "Cache-Control": "no-cache, no-store, must-revalidate",
+               Pragma: "no-cache",
+               Expires: "0",
+            },
+            body: JSON.stringify({
+               data: resumeData,
+               templateId: selectedTemplate.id,
+            }),
+         });
+
+         console.log("Response status:", response.status);
+         console.log(
+            "Response headers:",
+            Object.fromEntries([...response.headers])
+         );
+
+         if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Response error text:", errorText);
+            throw new Error(
+               `Download failed: ${response.status} - ${
+                  errorText || "Unknown error"
+               }`
+            );
+         }
+
+         const blob = await response.blob();
+         console.log("Received blob size:", blob.size, "type:", blob.type);
+
+         if (!blob || blob.size === 0) {
+            throw new Error("Received empty blob from server");
+         }
+
+         // Create a download link manually with a random ID to ensure uniqueness
+         const downloadId = `download-${Math.random()
+            .toString(36)
+            .substring(2, 15)}`;
+         const url = URL.createObjectURL(blob);
+
+         // Remove any existing download link with the same ID
+         const existingLink = document.getElementById(downloadId);
+         if (existingLink) {
+            document.body.removeChild(existingLink);
+         }
+
+         // Create a new download link
+         const downloadLink = document.createElement("a");
+         downloadLink.id = downloadId;
+         downloadLink.href = url;
+         downloadLink.download = `resume_${selectedTemplate.id}_${timestamp}.docx`;
+         downloadLink.style.display = "none";
+         document.body.appendChild(downloadLink);
+
+         // Force a click event
+         downloadLink.click();
+
+         // Clean up after a delay
+         setTimeout(() => {
+            if (document.body.contains(downloadLink)) {
+               document.body.removeChild(downloadLink);
+            }
+            URL.revokeObjectURL(url);
+            console.log(
+               `Download link ${downloadId} removed and blob URL revoked`
+            );
+         }, 2000);
+
+         console.log("Download initiated with ID:", downloadId);
+         console.log("Download completed successfully");
+      } catch (error) {
+         console.error("Download error:", error);
+         alert(`Failed to download: ${error.message}`);
+      } finally {
+         setIsDownloading(false);
       }
-      
-      setFile(selectedFile);
-      dispatch(setError(null));
-    }
-  };
+   };
 
-  const handleUpload = async () => {
-    if (!file) return;
+   const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!file) return;
+      setIsLoading(true); // Start loading
 
-    try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
+      try {
+         const arrayBuffer = await file.arrayBuffer();
+         const result = await mammoth.extractRawText({ arrayBuffer });
+         const text = result.value;
 
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.convertToHtml({ 
-        arrayBuffer: arrayBuffer,
-        includeDefaultStyleMap: true
-      });
-      
-      const textContent = result.value
-        .replace(/<[^>]+>/g, '\n') // Replace HTML tags with newlines
-        .replace(/&nbsp;/g, ' ')   // Replace &nbsp; with spaces
-        .replace(/\n\s*\n/g, '\n') // Remove extra newlines
-        .trim();
-            
-      if (!textContent?.trim()) {
-        throw new Error('The document appears to be empty');
+         const response = await fetch("/api/format", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+         });
+
+         if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+         }
+
+         const structuredData = await response.json();
+         console.log(structuredData, "console.log(structuredData); ");
+         setResumeData(structuredData);
+      } catch (error) {
+         console.error("Error formatting resume:", error);
+         // Handle the error, maybe show an error message to the user
+      } finally {
+         setIsLoading(false); // Stop loading, regardless of success or failure
       }
+   };
 
-      dispatch(setOriginalText(textContent));
-
-      // Parse resume
-      const parsedContent = await ResumeService.parseResume(textContent);
-      
-      if (!parsedContent?.sections?.length) {
-        throw new Error('No sections were identified in the resume');
-      }
-
-      dispatch(setParsedSections(parsedContent));
-    } catch (error) {
-      console.error("Upload error:", error);
-      dispatch(setError(error.message || 'Failed to process the document. Please try again.'));
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-  const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template);
-    // Initialize mapped sections with empty values
-    const initialMapping = {};
-    template.sections.forEach(section => {
-      initialMapping[section] = '';
-    });
-    setMappedSections(initialMapping);
-  };
-
-  const handleSectionMap = (templateSection, parsedSection) => {
-    setMappedSections(prev => ({
-      ...prev,
-      [templateSection]: parsedSection
-    }));
-  };
-
-  const generateFormattedResume = async () => {
-    try {
-      dispatch(setLoading(true));
-      
-      // Create content object for the selected template
-      const content = {};
-      Object.entries(mappedSections).forEach(([templateSection, parsedSectionTitle]) => {
-        const parsedSection = parsedSections.sections.find(s => s.title === parsedSectionTitle);
-        content[templateSection] = parsedSection ? parsedSection.content : '';
-      });
-      
-      // Generate document
-      const blob = await TemplateService.generateDocument(content, selectedTemplate);
-      
-      // Download the file
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'formatted_resume.docx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      dispatch(setError('Resume generated successfully!'));
-    } catch (error) {
-      console.error('Failed to generate resume:', error);
-      dispatch(setError('Failed to generate resume: ' + error.message));
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-  return (
-    <div className="w-full max-w-2xl pt-36 mx-auto">
-      <div>
-        <div>Resume Format Converter</div>
-      </div>
-      <div>
-        <div className="space-y-6">
-          {/* File Upload Section */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <input
-              type="file"
-              accept=".doc,.docx"
-              onChange={handleFileChange}
-              className="hidden"
-              id="resume-upload"
-            />
-            <label
-              htmlFor="resume-upload"
-              className="cursor-pointer text-indigo-600 hover:text-indigo-800"
+   return (
+      <div className="p-8 pt-40 mx-20">
+         <h1 className="text-3xl mb-4">Resume Formatter</h1>
+         <form onSubmit={handleSubmit} className="mb-8">
+            <input type="file" accept=".docx" onChange={handleFileChange} />
+            <button
+               type="submit"
+               className="ml-4 bg-blue-500 text-white p-2 rounded"
+               disabled={isLoading} // Disable button when loading
             >
-              Choose a Word document
-            </label>
-            {file && (
-              <p className="mt-2 text-sm text-gray-600">
-                Selected: {file.name}
-              </p>
-            )}
-            <p className="mt-2 text-xs text-gray-500">
-              Supported formats: .doc, .docx
-            </p>
-          </div>
-
-          {/* Parse Button */}
-          <Button
-            onClick={handleUpload}
-            disabled={!file || loading}
-            className="w-full"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Processing...</span>
-              </div>
-            ) : (
-              "Parse Resume"
-            )}
-          </Button>
-
-          {error && (
-            <div className={`text-sm mt-2 p-3 rounded-md ${error.includes('successfully') ? 'text-green-500 bg-green-50' : 'text-red-500 bg-red-50'}`}>
-              {error}
+               {isLoading ? "Formatting..." : "Format Resume"}{" "}
+               {/* Show loading message */}
+            </button>
+         </form>
+         {isLoading && <p>Loading...</p>} {/* Simple loading indicator */}
+         <select
+            value={selectedTemplate.id}
+            onChange={handleTemplateChange}
+            className="mb-4 p-2 border rounded"
+         >
+            {templates.map((template) => (
+               <option key={template.id} value={template.id}>
+                  {template.name}
+               </option>
+            ))}
+         </select>
+         {resumeData && (
+            <div className="mt-4 border border-slate-300 shadow-xl w-[48rem] justify-self-center">
+               <button
+                  onClick={handleDownload}
+                  className="ml-4 bg-green-500 text-white p-2 rounded"
+                  disabled={isDownloading}
+               >
+                  {isDownloading ? "Downloading..." : "Download Resume"}
+               </button>
+               {selectedTemplate.generate(resumeData)}
             </div>
-          )}
-
-          {parsedSections && (
-            <div className="mt-8 space-y-6">
-              {/* Template Selection */}
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold">Select Template</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedTemplate?.id === template.id ? 'border-blue-500 shadow-lg' : 'hover:border-gray-400'}`}
-                      onClick={() => handleTemplateSelect(template)}
-                    >
-                      <h3 className="font-medium mb-2">{template.name}</h3>
-                      <ul className="text-sm text-gray-600 list-disc list-inside">
-                        {template.sections.map((section) => (
-                          <li key={section}>{section}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Section Mapping */}
-              {selectedTemplate && (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Map Sections</h2>
-                  <div className="space-y-4">
-                    {selectedTemplate.sections.map((templateSection) => (
-                      <div key={templateSection} className="border rounded-lg p-4">
-                        <h3 className="font-medium mb-2">{templateSection}</h3>
-                        <select
-                          className="w-full p-2 border rounded"
-                          value={mappedSections[templateSection] || ''}
-                          onChange={(e) => handleSectionMap(templateSection, e.target.value)}
-                        >
-                          <option value="">Select section to map</option>
-                          {parsedSections.sections.map((section) => (
-                            <option key={section.title} value={section.title}>
-                              {section.title}
-                            </option>
-                          ))}
-                        </select>
-                        {mappedSections[templateSection] && (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-600 mb-1">Preview:</p>
-                            <div className="text-sm bg-gray-50 p-2 rounded max-h-32 overflow-y-auto">
-                              {(() => {
-                                const section = parsedSections.sections.find(
-                                  s => s.title === mappedSections[templateSection]
-                                );
-                                if (!section) return '';
-                                
-                                const content = section.content;
-                                if (!content) return '';
-
-                                switch (section.type) {
-                                  case 'contact':
-                                    return (
-                                      <div>
-                                        <div>{content.name}</div>
-                                        <div>{content.email}</div>
-                                        <div>{content.phone}</div>
-                                        <div>{content.location}</div>
-                                        {content.portfolio && <div>{content.portfolio}</div>}
-                                        {content.linkedin && <div>{content.linkedin}</div>}
-                                      </div>
-                                    );
-                                  case 'skills':
-                                    return (
-                                      <div>
-                                        {content.map((skill, i) => (
-                                          <span key={i} className="inline-block mr-2 mb-1 px-2 py-1 bg-gray-200 rounded text-xs">
-                                            {skill}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    );
-                                  case 'experience':
-                                    return (
-                                      <div className="space-y-2">
-                                        {content.map((exp, i) => (
-                                          <div key={i}>
-                                            <div className="font-medium">{exp.company}</div>
-                                            <div className="text-xs text-gray-600">
-                                              {exp.title} • {exp.duration}
-                                              {exp.location && ` • ${exp.location}`}
-                                            </div>
-                                            <ul className="list-disc list-inside text-xs mt-1">
-                                              {exp.responsibilities.slice(0, 2).map((resp, j) => (
-                                                <li key={j}>{resp}</li>
-                                              ))}
-                                              {exp.responsibilities.length > 2 && (
-                                                <li>... and {exp.responsibilities.length - 2} more</li>
-                                              )}
-                                            </ul>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    );
-                                  case 'education':
-                                    return (
-                                      <div className="space-y-2">
-                                        {content.map((edu, i) => (
-                                          <div key={i}>
-                                            <div className="font-medium">{edu.degree}</div>
-                                            <div className="text-xs text-gray-600">
-                                              {edu.institution}
-                                              {edu.duration && ` • ${edu.duration}`}
-                                              {edu.gpa && ` • GPA: ${edu.gpa}`}
-                                            </div>
-                                            {edu.achievements.length > 0 && (
-                                              <ul className="list-disc list-inside text-xs mt-1">
-                                                {edu.achievements.slice(0, 2).map((achievement, j) => (
-                                                  <li key={j}>{achievement}</li>
-                                                ))}
-                                                {edu.achievements.length > 2 && (
-                                                  <li>... and {edu.achievements.length - 2} more</li>
-                                                )}
-                                              </ul>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    );
-                                  default:
-                                    return typeof content === 'object' ? 
-                                      JSON.stringify(content, null, 2) : 
-                                      content;
-                                }
-                              })()}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Generate Button */}
-                  <Button
-                    onClick={generateFormattedResume}
-                  //   disabled={loading || Object.values(mappedSections).some(v => !v)}
-                    className="w-full mt-4"
-                  >
-                    {loading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Generating...</span>
-                      </div>
-                    ) : (
-                      "Generate Formatted Resume"
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {/* Parsed Sections Preview */}
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">Parsed Sections</h2>
-                <div className="text-sm text-gray-500 mb-4">
-                  Total sections found: {parsedSections.metadata?.totalSections || 0}
-                </div>
-                <div className="space-y-4">
-                  {parsedSections.sections.map((section, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-medium text-lg">{section.title}</h3>
-                        <span className="text-xs text-gray-500">{section.type}</span>
-                      </div>
-                      <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                        {typeof section.content === 'object' ? JSON.stringify(section.content, null, 2) : section.content}
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+         )}{" "}
       </div>
-    </div>
-  );
+   );
 }

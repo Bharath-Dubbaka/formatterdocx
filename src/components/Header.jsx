@@ -67,7 +67,7 @@ const Header = () => {
                   <span
                      className={`text-[2.3rem] pb-2 flex flex-col font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent hover:from-pink-500 hover:via-purple-600 hover:to-indigo-600 transition-all duration-300`}
                   >
-                     Aioku
+                     Formaxz
                      <span className="text-xs text-black font-normal">
                         prod by <span className="font-bold"> CVtoSalary</span>
                      </span>
@@ -87,9 +87,11 @@ const Header = () => {
                   ))}
                </nav>
                {/* User Section */}
-               <div className="flex items-center space-x-4">
+               {/* <div className="flex items-center space-x-4">
                   {authLoading ? (
-                     <div className="animate-pulse bg-gray-200 h-10 w-24 rounded" />
+                     <div className="animate-pulse bg-gray-200 h-10 w-24 rounded">
+                        loading
+                     </div>
                   ) : !user ? (
                      <Button
                         onClick={handleSignIn}
@@ -168,7 +170,7 @@ const Header = () => {
                         )}
                      </div>
                   )}
-               </div>
+               </div> */}
             </div>
          </div>
       </header>

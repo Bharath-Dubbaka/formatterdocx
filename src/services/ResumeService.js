@@ -1,317 +1,407 @@
-class ResumeService {
-  static sectionHeaders = {
-    contact: ["contact", "personal information", "name", "email", "phone"],
-    skills: ["skills", "technical skills", "key skills", "technologies", "expertise"],
-    experience: ["experience", "professional experience", "work history", "employment"],
-    education: ["education", "academic background", "qualifications"],
-    summary: ["summary", "profile", "professional summary", "about me"],
-    projects: ["projects", "personal projects", "key projects"],
-    certifications: ["certifications", "certificates", "professional certifications"],
-    achievements: ["achievements", "awards", "honors"],
-  };
+// const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
-  static async parseResume(text) {
-    try {
-      const sections = this.identifySections(text);
-      const mappedSections = this.mapSectionsToTemplate(sections);
-      
-      return {
-        metadata: {
-          totalSections: sections.length,
-          timestamp: new Date().toISOString(),
-        },
-        sections: mappedSections,
-      };
-    } catch (error) {
-      console.error("Error parsing resume:", error);
-      throw new Error("Failed to parse resume content");
-    }
-  }
+// class ResumeService {
+//   static async parseResume(text) {
+//     try {
+//       // Split text into sections based on distinctive headers
+//       const sections = [];
+//       const lines = text.split("\n");
+//       let currentSection = null;
+//       let currentContent = [];
 
-  static identifySections(text) {
-    const sections = [];
-    const lines = text.split("\n");
-    
-    let currentSection = { title: "Unknown", type: "unknown", content: "" };
-    let isProcessingContent = false;
+//       for (let line of lines) {
+//         // Check if line is a section header (in caps, ends with : or empty lines around it)
+//         if (
+//           line.trim().toUpperCase() === line.trim() &&
+//           (line.includes(":") || line.length > 10) &&
+//           line.trim().length > 0
+//         ) {
+//           // Save previous section if exists
+//           if (currentSection) {
+//             sections.push({
+//               title: currentSection,
+//               content: currentContent.join("\n").trim(),
+//             });
+//           }
 
-    lines.forEach((line) => {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) return; // Skip empty lines
+//           // Start new section
+//           currentSection = line.trim();
+//           currentContent = [];
+//         } else if (line.trim() || currentContent.length > 0) {
+//           currentContent.push(line);
+//         }
+//       }
 
-      const lowerCaseLine = trimmedLine.toLowerCase();
-      let foundHeader = false;
+//       // Add last section
+//       if (currentSection) {
+//         sections.push({
+//           title: currentSection,
+//           content: currentContent.join("\n").trim(),
+//         });
+//       }
 
-      // Check if line is a section header
-      for (const [type, headers] of Object.entries(this.sectionHeaders)) {
-        if (headers.some(header => 
-          lowerCaseLine.includes(header) && 
-          lowerCaseLine.length < header.length + 10 // Avoid matching content that just contains header words
-        )) {
-          // Save previous section if it has content
-          if (currentSection.content.trim()) {
-            sections.push({...currentSection});
-          }
+//       // Call OpenAI API to analyze sections
+//       const response = await fetch(
+//         "https://api.openai.com/v1/chat/completions",
+//         {
+//           method: "POST",
+//           headers: {
+//             "Content-Type": "application/json",
+//             Authorization: `Bearer ${OPENAI_API_KEY}`,
+//           },
+//           body: JSON.stringify({
+//             model: "gpt-3.5-turbo-16k",
+//             messages: [
+//               {
+//                 role: "user",
+//                 content: `Given the following resume text, extract and structure it into this JSON schema: 
+//                 {
+//                   "personalInfo": {"name": "", "phone": "", "email": "", "summary": ""},
+//                   "workExperience": [{"roleTitle": "", "employer": "", "location": {"full": ""}, "startDate": "", "endDate": "", "responsibilities": []}],
+//                   "education": [{"degree": "", "institution": "", "startDate": "", "endDate": ""}],
+//                   "skills": {"technical": [{"category": "", "skills": []}], "soft": [], "languages": []},
+//                   "certifications": [{"name": "", "issuer": "", "issueDate": "", "expiryDate": ""}],
+//                   "projects": [{"name": "", "description": "", "technologies": []}],
+//                   "additionalSections": [{"title": "", "content": ""}]
+//                 }
+//                 Resume text: ${text}
+//                 Return only the JSON object, no additional commentary.`,
+//               },
+//             ],
+//             temperature: 0.1,
+//           }),
+//         }
+//       );
 
-          // Start new section
-          currentSection = {
-            title: trimmedLine,
-            type,
-            content: "",
-            raw: "" // Keep raw content for debugging
-          };
-          
-          foundHeader = true;
-          isProcessingContent = true;
-          break;
-        }
-      }
+//       const result = await response.json();
+//       let parsedSections = [];
 
-      if (!foundHeader && isProcessingContent) {
-        currentSection.content += trimmedLine + "\n";
-        currentSection.raw += line + "\n";
-      }
-    });
+//       try {
+//         const cleanedContent = result.choices[0].message.content
+//           .replace(/```json/g, "")
+//           .replace(/```/g, "")
+//           .trim();
 
-    // Add the last section
-    if (currentSection.content.trim()) {
-      sections.push(currentSection);
-    }
+//         parsedSections = JSON.parse(cleanedContent);
+//       } catch (error) {
+//         console.warn("Failed to parse OpenAI response:", error);
+//         parsedSections = sections;
+//       }
 
-    return sections;
-  }
+//       return {
+//         sections: parsedSections,
+//         originalText: text,
+//       };
+//     } catch (error) {
+//       console.error("Error parsing resume:", error);
+//       return {
+//         sections: sections,
+//         originalText: text,
+//       };
+//     }
+//   }
+// }
 
-  static mapSectionsToTemplate(sections) {
-    return sections.map(section => {
-      const mappedSection = { ...section };
-      
-      switch (section.type) {
-        case "contact":
-          mappedSection.content = this.parseContactInfo(section.content);
-          break;
-        case "skills":
-          mappedSection.content = this.parseSkills(section.content);
-          break;
-        case "experience":
-          mappedSection.content = this.parseExperience(section.content);
-          break;
-        case "education":
-          mappedSection.content = this.parseEducation(section.content);
-          break;
-        // Other sections keep their original content
-        default:
-          mappedSection.content = section.content.trim();
-      }
+// // Helper functions
+// function splitIntoSections(text) {
+//   if (!text) return {};
 
-      return mappedSection;
-    });
-  }
+//   const sections = {};
+//   const lines = text.split("\n");
+//   let currentSection = "header";
+//   let currentContent = [];
 
-  static parseContactInfo(content) {
-    const contact = {
-      name: "",
-      email: "",
-      phone: "",
-      location: "",
-      portfolio: "",
-      linkedin: ""
-    };
+//   const sectionHeaders = [
+//     "SUMMARY",
+//     "PROFESSIONAL EXPERIENCE",
+//     "EDUCATION",
+//     "SKILLS",
+//     "CERTIFICATIONS",
+//     "AWARDS",
+//     "PERSONAL DETAILS",
+//     "ADDITIONAL COURSES",
+//     "PROJECTS",
+//     "ACHIEVEMENTS",
+//     "LANGUAGES",
+//   ];
 
-    const lines = content.split("\n");
-    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-    const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
-    const urlRegex = /https?:\/\/[^\s]+/;
-    const linkedinRegex = /linkedin\.com\/[^\s]+/;
+//   for (let line of lines) {
+//     const upperLine = line.trim().toUpperCase();
 
-    lines.forEach(line => {
-      const trimmedLine = line.trim();
-      
-      // Extract email
-      const emailMatch = trimmedLine.match(emailRegex);
-      if (emailMatch && !contact.email) {
-        contact.email = emailMatch[0];
-      }
+//     // Check if this line is a section header
+//     const isHeader = sectionHeaders.some(
+//       (header) =>
+//         upperLine.includes(header) &&
+//         (upperLine.startsWith(header) || upperLine.endsWith(header))
+//     );
 
-      // Extract phone
-      const phoneMatch = trimmedLine.match(phoneRegex);
-      if (phoneMatch && !contact.phone) {
-        contact.phone = phoneMatch[0];
-      }
+//     if (isHeader) {
+//       // Store previous section
+//       if (currentContent.length > 0) {
+//         sections[currentSection.toLowerCase()] = currentContent.join("\n");
+//       }
+//       // Start new section
+//       currentSection = line.trim();
+//       currentContent = [];
+//     } else if (line.trim()) {
+//       currentContent.push(line);
+//     }
+//   }
 
-      // Extract LinkedIn
-      const linkedinMatch = trimmedLine.match(linkedinRegex);
-      if (linkedinMatch && !contact.linkedin) {
-        contact.linkedin = linkedinMatch[0];
-      }
+//   // Store the last section
+//   if (currentContent.length > 0) {
+//     sections[currentSection.toLowerCase()] = currentContent.join("\n");
+//   }
 
-      // Extract portfolio URL
-      const urlMatch = trimmedLine.match(urlRegex);
-      if (urlMatch && !contact.portfolio && !trimmedLine.includes("linkedin")) {
-        contact.portfolio = urlMatch[0];
-      }
+//   return sections;
+// }
 
-      // If line doesn't contain any of the above and is short, it might be the name
-      if (!contact.name && 
-          !emailMatch && !phoneMatch && !urlMatch && 
-          trimmedLine.length > 0 && trimmedLine.length < 50) {
-        contact.name = trimmedLine;
-      }
+// function parsePersonalInfo(text) {
+//   const info = {
+//     name: "",
+//     email: "",
+//     phone: "",
+//     location: { full: null },
+//     summary: "",
+//   };
 
-      // Location is usually a short line with city/state or similar
-      if (!contact.location && 
-          trimmedLine.length > 0 && 
-          trimmedLine.length < 50 && 
-          !emailMatch && !phoneMatch && !urlMatch) {
-        // Check if line looks like a location (contains common location keywords)
-        const locationKeywords = ["road", "street", "ave", "lane", "city", "state", "country"];
-        if (locationKeywords.some(keyword => trimmedLine.toLowerCase().includes(keyword))) {
-          contact.location = trimmedLine;
-        }
-      }
-    });
+//   const lines = text.split("\n");
 
-    return contact;
-  }
+//   // Extract name (usually first non-empty line)
+//   for (const line of lines) {
+//     if (
+//       line.trim() &&
+//       !line.includes("@") &&
+//       !line.includes("Cell:") &&
+//       !line.includes("Phone:")
+//     ) {
+//       info.name = line.trim();
+//       break;
+//     }
+//   }
 
-  static parseSkills(content) {
-    // Split by common delimiters and clean up
-    const skillsList = content
-      .split(/[,•|\n]+/)
-      .map(skill => skill.trim())
-      .filter(skill => 
-        skill.length > 0 && 
-        skill.length < 50 && // Avoid long phrases
-        !/^\d+/.test(skill) // Avoid lines starting with numbers (likely not skills)
-      );
+//   // Extract email and phone
+//   for (const line of lines) {
+//     const trimmedLine = line.trim();
+//     if (trimmedLine.includes("@")) {
+//       info.email = trimmedLine.replace("Email:", "").trim();
+//     }
+//     if (trimmedLine.includes("Cell:") || trimmedLine.includes("Phone:")) {
+//       info.phone = trimmedLine
+//         .replace("Cell:", "")
+//         .replace("Phone:", "")
+//         .trim();
+//     }
+//   }
 
-    return skillsList;
-  }
+//   // Extract summary
+//   const summaryIndex = text.toLowerCase().indexOf("summary");
+//   if (summaryIndex !== -1) {
+//     const summaryText = text.slice(summaryIndex);
+//     const nextSectionIndex = summaryText.search(/\n\s*[A-Z][A-Z\s]+:/);
+//     info.summary =
+//       nextSectionIndex !== -1
+//         ? summaryText
+//             .slice(0, nextSectionIndex)
+//             .replace(/summary:?/i, "")
+//             .trim()
+//         : summaryText.replace(/summary:?/i, "").trim();
+//   }
 
-  static parseExperience(content) {
-    const experiences = [];
-    const lines = content.split("\n").filter(line => line.trim());
-    
-    let currentExp = {
-      company: "",
-      title: "",
-      duration: "",
-      location: "",
-      responsibilities: []
-    };
+//   return info;
+// }
 
-    let isProcessingResponsibilities = false;
+// function parseWorkExperience(text) {
+//   const experiences = [];
+//   const expSection = text.match(
+//     /PROFESSIONAL\s+EXPERIENCE\s*:?([\s\S]*?)(?=\n\s*[A-Z][A-Z\s]+:|$)/i
+//   );
 
-    lines.forEach((line, index) => {
-      const trimmedLine = line.trim();
-      
-      // Look for date patterns
-      const datePattern = /(?:\d{1,2}\/\d{1,2}\/\d{2,4})|(?:\d{4}\s*-\s*(?:\d{4}|present))|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{4})/i;
-      
-      if (datePattern.test(trimmedLine)) {
-        // If we find a date and we have a previous experience, save it
-        if (currentExp.company) {
-          experiences.push({...currentExp});
-          currentExp = {
-            company: "",
-            title: "",
-            duration: "",
-            location: "",
-            responsibilities: []
-          };
-        }
-        currentExp.duration = trimmedLine;
-        isProcessingResponsibilities = false;
-      }
-      // Look for bullet points or numbered lists for responsibilities
-      else if (trimmedLine.startsWith("•") || trimmedLine.startsWith("-") || /^\d+\./.test(trimmedLine)) {
-        isProcessingResponsibilities = true;
-        currentExp.responsibilities.push(trimmedLine.replace(/^[•\-\d.]\s*/, ""));
-      }
-      // If line is short, it might be company name or title
-      else if (trimmedLine.length < 100) {
-        if (!currentExp.company) {
-          currentExp.company = trimmedLine;
-        } else if (!currentExp.title) {
-          currentExp.title = trimmedLine;
-        } else if (!currentExp.location && /[A-Z]{2}/.test(trimmedLine)) { // Look for state abbreviations
-          currentExp.location = trimmedLine;
-        }
-      }
-      // If we're processing responsibilities and line doesn't match other patterns
-      else if (isProcessingResponsibilities) {
-        currentExp.responsibilities.push(trimmedLine);
-      }
-    });
+//   if (!expSection) return [];
 
-    // Add the last experience
-    if (currentExp.company || currentExp.responsibilities.length > 0) {
-      experiences.push(currentExp);
-    }
+//   const expText = expSection[1];
+//   const expEntries = expText.split(
+//     /(?=\n[A-Za-z]+[\s\S]*?\([Ii]nternship\)|(?=\n[A-Za-z]+[\s\S]*?[12][0-9]{3}))/g
+//   );
 
-    return experiences;
-  }
+//   for (const entry of expEntries) {
+//     if (!entry.trim()) continue;
 
-  static parseEducation(content) {
-    const education = [];
-    const lines = content.split("\n").filter(line => line.trim());
-    
-    let currentEdu = {
-      degree: "",
-      institution: "",
-      duration: "",
-      gpa: "",
-      achievements: []
-    };
+//     const exp = {
+//       employer: "",
+//       roleTitle: "",
+//       location: { full: null },
+//       startDate: "",
+//       endDate: "",
+//       responsibilities: [],
+//       type: "",
+//     };
 
-    lines.forEach((line) => {
-      const trimmedLine = line.trim();
-      
-      // Look for degree keywords
-      const degreeKeywords = ["bachelor", "master", "phd", "diploma", "certificate", "b.tech", "m.tech", "b.e", "m.e"];
-      const isDegreeLine = degreeKeywords.some(keyword => 
-        trimmedLine.toLowerCase().includes(keyword)
-      );
+//     const lines = entry
+//       .split("\n")
+//       .map((line) => line.trim())
+//       .filter(Boolean);
 
-      // Look for GPA
-      const gpaMatch = trimmedLine.match(/GPA:?\s*(\d+\.?\d*)/i);
-      
-      if (isDegreeLine) {
-        if (currentEdu.degree) {
-          education.push({...currentEdu});
-          currentEdu = {
-            degree: "",
-            institution: "",
-            duration: "",
-            gpa: "",
-            achievements: []
-          };
-        }
-        currentEdu.degree = trimmedLine;
-      }
-      else if (gpaMatch) {
-        currentEdu.gpa = gpaMatch[1];
-      }
-      // Look for dates
-      else if (/\d{4}/.test(trimmedLine) && trimmedLine.length < 50) {
-        currentEdu.duration = trimmedLine;
-      }
-      // If line is short and we don't have institution, it might be the institution name
-      else if (trimmedLine.length < 100 && !currentEdu.institution) {
-        currentEdu.institution = trimmedLine;
-      }
-      // Other lines might be achievements
-      else {
-        currentEdu.achievements.push(trimmedLine);
-      }
-    });
+//     // Parse first line for company and role
+//     const firstLine = lines[0];
+//     if (firstLine.includes("(")) {
+//       [exp.employer, exp.type] = firstLine.split("(");
+//       exp.type = exp.type.replace(")", "").trim();
+//     } else {
+//       exp.employer = firstLine;
+//     }
 
-    // Add the last education entry
-    if (currentEdu.degree || currentEdu.institution) {
-      education.push(currentEdu);
-    }
+//     // Parse role title and dates
+//     const roleAndDate = lines[1] || "";
+//     const dateMatch = roleAndDate.match(
+//       /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*\d{4}\s*[-–]\s*(Present|\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec\s*\d{4})/i
+//     );
 
-    return education;
-  }
-}
+//     if (dateMatch) {
+//       exp.roleTitle = roleAndDate.replace(dateMatch[0], "").trim();
+//       const [startDate, endDate] = dateMatch[0].split(/[-–]/);
+//       exp.startDate = startDate.trim();
+//       exp.endDate = endDate.trim();
+//     }
 
-export default ResumeService;
+//     // Parse responsibilities
+//     exp.responsibilities = lines
+//       .slice(2)
+//       .filter(
+//         (line) => line.trim() && !line.toLowerCase().includes("responsibilit")
+//       )
+//       .map((line) => line.replace(/^[•\-]\s*/, "").trim());
+
+//     experiences.push(exp);
+//   }
+
+//   return experiences;
+// }
+
+// function parseEducation(text) {
+//   const education = [];
+//   const eduSection = text.match(
+//     /EDUCATION(?:\s+QUALIFICATION)?:?([\s\S]*?)(?=\n\s*[A-Z][A-Z\s]+:|$)/i
+//   );
+
+//   if (!eduSection) return [];
+
+//   const eduText = eduSection[1];
+//   const entries = eduText.split(/(?=\n[•\-]\s*|(?=\n[A-Z]))/g);
+
+//   for (const entry of entries) {
+//     if (!entry.trim()) continue;
+
+//     const edu = {
+//       degree: "",
+//       institution: "",
+//       field: "",
+//       gpa: null,
+//       originalText: entry.trim(),
+//     };
+
+//     const lines = entry
+//       .split("\n")
+//       .map((line) => line.trim())
+//       .filter(Boolean);
+
+//     for (const line of lines) {
+//       const cleanLine = line.replace(/^[•\-]\s*/, "");
+
+//       if (
+//         cleanLine.includes("B.Tech") ||
+//         cleanLine.includes("B.E.") ||
+//         cleanLine.includes("Bachelor")
+//       ) {
+//         edu.degree = "B.Tech";
+//       } else if (
+//         cleanLine.includes("M.Tech") ||
+//         cleanLine.includes("M.E.") ||
+//         cleanLine.includes("Master")
+//       ) {
+//         edu.degree = "M.Tech";
+//       } else if (cleanLine.toLowerCase().includes("intermediate")) {
+//         edu.degree = "Intermediate";
+//       } else if (cleanLine.includes("SSC") || cleanLine.includes("10th")) {
+//         edu.degree = "SSC";
+//       }
+
+//       // Extract institution
+//       if (
+//         cleanLine.includes("College") ||
+//         cleanLine.includes("Institute") ||
+//         cleanLine.includes("School")
+//       ) {
+//         edu.institution = cleanLine.split(",")[0].trim();
+//       }
+
+//       // Extract GPA/percentage
+//       const gradeMatch = cleanLine.match(/(\d+\.?\d*)%?/);
+//       if (gradeMatch) {
+//         edu.gpa = gradeMatch[1];
+//       }
+//     }
+
+//     if (edu.degree || edu.institution) {
+//       education.push(edu);
+//     }
+//   }
+
+//   return education;
+// }
+
+// function parseSkills(text) {
+//   const skills = {
+//     technical: [],
+//     soft: [],
+//     languages: [],
+//     originalText: "",
+//   };
+
+//   const skillsSection = text.match(
+//     /TECHNICAL\s+SKILLS:?([\s\S]*?)(?=\n\s*[A-Z][A-Z\s]+:|$)/i
+//   );
+
+//   if (!skillsSection) return skills;
+
+//   const skillsText = skillsSection[1];
+//   skills.originalText = skillsText;
+
+//   const lines = skillsText
+//     .split("\n")
+//     .map((line) => line.trim())
+//     .filter(Boolean);
+
+//   for (const line of lines) {
+//     const cleanLine = line.replace(/^[•\-]\s*/, "");
+
+//     if (cleanLine.toLowerCase().includes("languages known:")) {
+//       skills.languages = cleanLine
+//         .split(":")[1]
+//         .split(",")
+//         .map((lang) => lang.trim());
+//       continue;
+//     }
+
+//     if (cleanLine.includes(":")) {
+//       const [category, skillsList] = cleanLine.split(":").map((s) => s.trim());
+//       skills.technical.push({
+//         category,
+//         skills: skillsList
+//           .split(",")
+//           .map((s) => s.trim())
+//           .filter(Boolean),
+//       });
+//     } else if (cleanLine) {
+//       // If no category, add to general technical skills
+//       skills.technical.push({
+//         category: "General",
+//         skills: [cleanLine],
+//       });
+//     }
+//   }
+
+//   return skills;
+// }
+
+// export default ResumeService;

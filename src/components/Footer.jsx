@@ -9,7 +9,7 @@ const Footer = () => {
                {/* Brand Column */}
                <div className="space-y-4">
                   <h2 className="flex flex-col text-2xl font-bold bg-gradient-to-r from-blue-900 to-pink-900 bg-clip-text text-transparent">
-                     Aioku
+                     Formaxz
                      <span className="text-xs text-black font-normal">
                         prod by <span className="font-bold"> CVtoSalary</span>
                      </span>
@@ -125,7 +125,7 @@ const Footer = () => {
             {/* Bottom Bar */}
             <div className="border-t mt-12 pt-8">
                <p className="text-center text-slate-600">
-                  © {new Date().getFullYear()} Aioku. All rights reserved.
+                  © {new Date().getFullYear()} Formaxz. All rights reserved.
                </p>
             </div>
          </div>
