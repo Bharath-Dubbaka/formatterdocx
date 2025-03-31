@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 
 export async function POST(req) {
-
-  
    try {
       console.log("🔍 API /api/format called");
 
@@ -106,8 +104,8 @@ Resume text: ${text}
 Return only the valid JSON object, no commentary.`,
             },
          ],
-         temperature: 0.3, // Lower temperature for more consistent results
-         max_tokens: 9000, // Ensure enough tokens for thorough processing
+         //  temperature: 0.3, // Lower temperature for more consistent results
+         max_tokens: 6000, // Ensure enough tokens for thorough processing
       });
 
       console.log("✅ OpenAI response received");
