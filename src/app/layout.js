@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { Providers } from "../components/Providers";
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
 const robotoMono = Roboto_Mono({ subsets: ["latin"] });
@@ -46,7 +47,11 @@ export default function RootLayout({ children }) {
    return (
       <html lang="en">
          <head>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+            {/* Load JSZip asynchronously */}
+            <Script
+               src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+               strategy="lazyOnload"
+            />{" "}
          </head>
          <body className={robotoMono.className}>
             <Providers>

@@ -17,7 +17,6 @@ import format from "./api/format/route";
 import { Loader2Icon } from "lucide-react";
 import { Packer } from "docx";
 import { saveAs } from "file-saver";
-import TemplateService from "../services/TemplateService";
 
 export default function Home() {
    const [file, setFile] = useState(null);
