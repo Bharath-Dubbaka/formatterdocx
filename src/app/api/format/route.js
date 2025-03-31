@@ -1,8 +1,23 @@
 import OpenAI from "openai";
 
 export async function POST(req) {
+
+  
    try {
+      console.log("🔍 API /api/format called");
+
       const { text } = await req.json();
+      if (!process.env.OPENAI_API_KEY) {
+         console.error("🚨 Missing OpenAI API Key!");
+         return new Response(
+            JSON.stringify({ error: "OpenAI API key is missing" }),
+            {
+               status: 500,
+               headers: { "Content-Type": "application/json" },
+            }
+         );
+      }
+
       const openai = new OpenAI({
          apiKey: process.env.OPENAI_API_KEY,
       });
@@ -94,6 +109,8 @@ Return only the valid JSON object, no commentary.`,
          temperature: 0.3, // Lower temperature for more consistent results
          max_tokens: 9000, // Ensure enough tokens for thorough processing
       });
+
+      console.log("✅ OpenAI response received");
 
       const structuredData = JSON.parse(response.choices[0].message.content);
       return new Response(JSON.stringify(structuredData), {
